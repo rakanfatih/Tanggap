@@ -1,8 +1,18 @@
-fastapi
-uvicorn
+# framework ai & agent
 langchain
 langgraph
+langchain-openai
+langchain-community
+
+# vectordb
 chromadb
-openai
-langchain
+sentence-transformers
 pypdf
+tiktoken
+
+#backend & API
+fastapi
+uvicorn
+
+#env manajement
+python-dotenv
