@@ -6,7 +6,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_openai import OpenAIEmbeddings
 
-# load environment variables
 load_dotenv()
 
 def create_vector_db():
@@ -14,12 +13,12 @@ def create_vector_db():
 
     documents = []
 
-    # memuat file pdf 
+    # load file pdf 
     print (" memuat file pdf ...")
     pdf_loader = PyPDFDirectoryLoader("data_knowledge/")
     documents.extend(pdf_loader.load())
 
-    # memuat file csv
+    # load file csv
     print (" memuat file csv ...")
     csv_files = glob.glob("data_knowledge/*csv")
     for file in csv_files:
