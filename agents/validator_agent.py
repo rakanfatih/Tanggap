@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def cek_cuaca_aktual(lat: float, lon: float) -> str:
-    """mengambil data cuaca realtime dari openweathermap"""
+    #ambil data cuaca dari openweathermap"""
     api_key = os.getenv("OPENWEATHER_API_KEY")
 
     if not api_key or api_key == "masukkan api key weather di sini":
@@ -15,7 +15,7 @@ def cek_cuaca_aktual(lat: float, lon: float) -> str:
     url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric&lang=id"
 
     try:
-        response = request.get(url)
+        response = requests.get(url)
         data = response.json()
 
         if response.status_code == 200:
@@ -27,8 +27,8 @@ def cek_cuaca_aktual(lat: float, lon: float) -> str:
     except Exception as e:
         return f"terjadi kesalahan konksi: {e}"
     
-def validasi_laporan(pesan: str, lat: float, lon: float):
-    """agen validator memverifikasi laporan berdasarkan lokasi dan cuaca"""
+def validasi_laporan(user_message: str, lat: float, lon: float):
+    #verifikasi laporan berdasarkan lokasi dan cuaca
     print(f"agen validator sedang mengecek titik koordinat [{lat}, {lon}]...")
 
     #panggil function cek cuaca
@@ -44,7 +44,7 @@ def validasi_laporan(pesan: str, lat: float, lon: float):
 
     #kembalikan enrched data
     hasil_validasi ={
-        "pesan_asli": pesan,
+        "pesan_asli": user_message,
         "koordinat_gps": f"[{lat}, {lon}]",
         "kondisi_cuaca_aktual": status_cuaca,
         "status_validasi": tingkat_validitas
