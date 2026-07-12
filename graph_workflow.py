@@ -1,23 +1,21 @@
-from typing import typedDict, Optional
+from typing import TypedDict, Optional
 from langgraph.graph import StateGraph, END
 
 #import function agent
-from router_agent import route_message
-from validator_agent import validasi_laporan
-from retriever_agent import retrieve_sop_info
-from executor_agent import execute_response
-
+from agents.router_agent import route_message
+from agents.validator_agent import validasi_laporan
+from agents.retriever_agent import retrieve_sop_info
+from agents.executor_agent import execute_response
 #state
-class GraphState(typedDict):
+class GraphState(TypedDict):
     user_message: str
     lat: Optional[float]
     lon: Optional[float]
-
-    intent: Optional[str] #hasil dari router agent
-    validation_data: Optional[dict] #hasil dari validator agent
-    context_data: Optional[str] #hasil dari retriever agent
+    intent: Optional[str] #hasil router agent
+    validation_data: Optional[dict] #hasil validator agent
+    context_data: Optional[str] #hasil retriever agent
     
-    #hasil akhir dari executor agent
+    #hasil akhir executor agent
     final_response: Optional[str]
     eskalasi_posko: Optional[bool]
     kategori_laporan: Optional[str] 
@@ -36,6 +34,12 @@ def node_validator(state:GraphState):
     hasil_validasi = validasi_laporan(state["user_message"], lat, lon)
     return {"validation_data": hasil_validasi}
 
+def node_retriever(state:GraphState):
+    print("\n[NODE] masuk ke agen retriever...")
+    teks_sop_mentah = retrieve_sop_info(state["user_message"])
+    return {"context_data": teks_sop_mentah}
+
+
 def node_executor(state:GraphState):
     print("\n[NODE] masuk ke agen executor...")
     hasil_eksekutor = execute_response(
@@ -53,7 +57,7 @@ def node_executor(state:GraphState):
 #logika pemilah jalur
 def route_after_classification(state: GraphState):
     intent = state.get("intent")
-    if intent == "laporan_darurat":
+    if intent == "lapor_darurat":
         return "validator"
     elif intent == "tanya_info":
         return "retriever"
@@ -66,7 +70,7 @@ workflow = StateGraph(GraphState)
 #tambah node
 workflow.add_node("router", node_router)
 workflow.add_node("validator", node_validator)
-workflow.add_node("retriever", retrieve_sop_info)
+workflow.add_node("retriever", node_retriever)
 workflow.add_node("executor", node_executor)
 
 workflow.set_entry_point("router") #titik masuk

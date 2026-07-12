@@ -1,18 +1,20 @@
 # framework ai & agent
 langchain
 langgraph
-langchain-openai
+langchain-groq
 langchain-community
 
-# vectordb
+# vectordb & embedding lokal
 chromadb
 sentence-transformers
 pypdf
 tiktoken
+huggingface_hub
 
-#backend & API
+# backend & API
 fastapi
 uvicorn
+requests
 
-#env manajement
+# env management
 python-dotenv

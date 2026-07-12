@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
@@ -16,7 +16,7 @@ def execute_response(intent: str, user_message: str, context_data: str = "", val
     print("agen Eksekutor sedang merumuskan keputusan akhir...")
 
     #inisialisasi llm
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
+    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2)
     structured_llm = llm.with_structured_output(ExecutorOutput)
 
     #prompt

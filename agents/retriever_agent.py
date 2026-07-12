@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from langchain_openai import OpenAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 
 load_dotenv()
@@ -9,7 +9,7 @@ def retrieve_sop_info(query: str):
     print(f"agen pemilah sedang mencari informasi untuk: '{query} ...")
 
     #panggil model embedding
-    embeddings = OpenAIEmbeddings()
+    embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-m3")
 
     #buka vector db
     try:

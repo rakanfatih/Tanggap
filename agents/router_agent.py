@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
@@ -15,7 +15,7 @@ def route_message(user_message: str):
     print("analisis pesan user ...")
 
     #inisialisasi model
-    llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
     
     #paksa mengikuti instruksi
     structured_llm = llm.with_structured_output(RouterOutput)

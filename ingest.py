@@ -4,22 +4,21 @@ from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFDirectoryLoader, CSVLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
-from langchain_openai import OpenAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 
 load_dotenv()
 
 def create_vector_db():
-    print ("1. membaca dokumen ...")
-
+    print("1. membaca dokumen ...")
     documents = []
 
     # load file pdf 
-    print (" memuat file pdf ...")
+    print(" memuat file pdf ...")
     pdf_loader = PyPDFDirectoryLoader("data_knowledge/")
     documents.extend(pdf_loader.load())
 
     # load file csv
-    print (" memuat file csv ...")
+    print(" memuat file csv ...")
     csv_files = glob.glob("data_knowledge/*csv")
     for file in csv_files:
         # agar simbol kebaca
@@ -28,7 +27,7 @@ def create_vector_db():
 
     print(f"total halaman/baris data yang dimuat: {len(documents)}" )
 
-    print ("2. chungking ....")
+    print("2. chungking ....")
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=200
@@ -38,9 +37,11 @@ def create_vector_db():
     print(f"total chunk yang dibuat: {len(chunks)}")
 
     print ("3. membuat vector database ...")
+    embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-m3")
+
     vector_store = Chroma.from_documents(
         documents=chunks,
-        embedding=OpenAIEmbeddings(),
+        embedding=embeddings,
         persist_directory="./vector_db"    
     )
 
