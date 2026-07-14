@@ -44,10 +44,10 @@ async def proses_laporan_warga(payload: LaporanRequest):
         print("[API] Pemrosesan Multi-Agent selesai. Mengirimkan response balik...")
 
         return LaporanResponse(
-            intent=hasil_workflow.get("intent", "lainnya"),
-            final_response=hasil_workflow.get("final_response", "Maaf, sistem mengalami gangguan kognitif."),
+            intent=hasil_workflow.get("intent", "info"),
+            final_response=hasil_workflow.get("final_response", "Sistem sedang memproses..."),
             eskalasi_posko=hasil_workflow.get("eskalasi_posko", False),
-            kategori_laporan=hasil_workflow.get("kategori_laporan", "bukan laporan")
+            kategori_laporan=hasil_workflow.get("kategori_laporan", "pencarian informasi")
     )
 
     except Exception as e:

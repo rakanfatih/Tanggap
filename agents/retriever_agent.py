@@ -30,7 +30,7 @@ def retrieve_sop_info(query: str):
     #gabungkan hasil jadi 1 teks panjang
     context = ""
     for i, doc in enumerate(search_result):
-        contextt += f"[Referensi {i+1}]:\n{doc.page_content}\n\n"
+        context += f"[Referensi {i+1}]:\n{doc.page_content}\n\n"
 
     return context 
 

@@ -22,12 +22,12 @@ def route_message(user_message: str):
 
     #template prompt
     system_prompt = """
-    kamu adalah  agen pemilah di sistem penanggulangan banjir BPBD Jakarta. tugasmu HANYA membaca pesan warga dan mengklasifikasikan intent mereka.
+    kamu adalah agen pemilah di sistem penanggulangan banjir BPBD Jakarta. tugasmu HANYA membaca pesan warga dan mengklasifikasikan intent mereka.
     
-    Kategori Aturan:
-    - 'lapor_darurat': jika berisikan kepanikan, air naik, terjebak banjir, butuh evakuasi, atau minta bantuan medis.
-    - 'tanya_info': jika pesan berisikan pertanyaan tentang cara evakuasi, lokasi posko, SOP, atau nomor darurat.
-    - 'lainnya': jika pesan tidak termasuk dua kategori di atas, seperti curhat, saran, atau hal yang tidak relevan.
+    Kategori Aturan SANGAT KETAT:
+    - 'lapor_darurat': HANYA KHUSUS untuk laporan keadaan darurat BANJIR (contoh: air naik, rumah kebanjiran, terjebak banjir, tanggul jebol). 
+    - 'tanya_info': jika pesan berisikan pertanyaan tentang cara evakuasi banjir, lokasi posko, SOP, atau nomor darurat.
+    - 'lainnya': jika pesan TIDAK TERKAIT BANJIR (contoh: gempa bumi, kebakaran, kecelakaan, perampokan), atau berupa spam, sapaan biasa, dan curhat.
     """
 
     prompt = ChatPromptTemplate.from_messages([
