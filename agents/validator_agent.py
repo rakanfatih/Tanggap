@@ -95,7 +95,7 @@ def cek_lokasi_aktual(lat: float, lon: float):
         response = requests.get(url, timeout=5)
 
         data = response.json()
-        print (data)
+        
         if data["status"] != "OK":
 
             return {

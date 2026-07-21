@@ -33,7 +33,7 @@ def get_all_laporan(
 
     return (
         db.query(Laporan)
-        .order_by(Laporan.id.desc())
+        .order_by(Laporan.waktu.desc())
         .all()
     )
 
@@ -48,7 +48,6 @@ def get_laporan_by_id(
         .filter(Laporan.id == laporan_id)
         .first()
     )
-
 
 def update_status(
     db: Session,

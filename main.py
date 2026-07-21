@@ -87,6 +87,8 @@ async def proses_laporan(
         print("=================================\n")
 
         # simpan to database
+        print("\n[MENYIMPAN KE DATABASE]")
+
         simpan_laporan(
             db=db,
             data={
@@ -136,6 +138,7 @@ async def proses_laporan(
 
             }
         )
+        print("[DATABASE] Berhasil disimpan")
 
         return LaporanResponse(
 

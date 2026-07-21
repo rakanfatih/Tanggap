@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import TypedDict, Optional
 from langgraph.graph import StateGraph, END
 from agents.router_agent import route_message
 from agents.validator_agent import validasi_laporan
@@ -87,7 +87,7 @@ def node_retriever(state: GraphState):
     )
 
     return {
-        "context": hasil["context"],/
+        "context": hasil["context"],
         "total_references": hasil["total_references"]
     }
 
