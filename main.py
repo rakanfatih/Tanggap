@@ -4,57 +4,141 @@ from pydantic import BaseModel, Field
 from typing import Optional
 from graph_workflow import app as langgraph_app
 
-#inisialisasi
+# FastAPI  
 app = FastAPI(
-    title="API sistem koordinasi bencana banjir multi-agent",
-    description="backend API berbasis fastAPI untuk menghubungkan Android dengan LLM"
+    title="Tanggap Multi-Agent API",
+    description="Backend API Sistem Koordinasi Bencana Banjir berbasis Multi-Agent",
+    version="2.0"
 )
 
-#request
+# request model 
 class LaporanRequest(BaseModel):
-    user_message: str = Field(..., description="pesan dari warga yang dikirim melalui aplikasi Android")
-    lat: Optional[float] = Field(default=0.0, description="opsional, koordinat GPS latitude dari lokasi warga")
-    lon: Optional[float] = Field(default=0.0, description="opsional, koordinat GPS longtitude dari lokasi warga")
 
-#response
+    user_message: str = Field(
+        ...,
+        description="Pesan yang dikirim warga."
+    )
+
+    lat: Optional[float] = Field(
+        default=0.0,
+        description="Latitude GPS."
+    )
+
+    lon: Optional[float] = Field(
+        default=0.0,
+        description="Longitude GPS."
+    )
+
+# response model
 class LaporanResponse(BaseModel):
-    intent: str = Field(..., description="hasil klasifikasi intent dari agen router: 'lapor_darurat', 'tanya_info', atau 'lainnya'")
-    final_response: str = Field(..., description="pesan balasan yang akan diteruskan ke warga")
-    eskalasi_posko: bool = Field(..., description="true jika laporan darurat butuh penanganan tim posko, false jika hanya pertanyaan info atau spam")
-    kategori_laporan: str = Field(..., description="pilih salah satu: 'insiden terverifikasi', 'perlu tinjauan', atau 'bukan laporan'")
 
-#post endpoint
-@app.post("/api/lapor", response_model=LaporanResponse)
-async def proses_laporan_warga(payload: LaporanRequest):
-    print("\n" + "="*40)
-    print(f"[API] menerima request masuk dari aplikasi Android...")
-    print(f"Pesan: {payload.user_message}")
-    print(f"Lokasi: [{payload.lat}, {payload.lon}]")
-    print("="*40)
+    intent: str
+    disaster_type: str
+    confidence: float
+    action: str
+    final_response: str
+    eskalasi_posko: bool
+    kategori_laporan: str
+
+# endpoint
+@app.post(
+    "/api/lapor",
+    response_model=LaporanResponse
+)
+
+async def proses_laporan(
+    payload: LaporanRequest
+):
+
+    print("\n===================================")
+    print("[FASTAPI]")
+    print("===================================")
+
+    print(f"Pesan      : {payload.user_message}")
+    print(f"Latitude   : {payload.lat}")
+    print(f"Longitude  : {payload.lon}")
 
     try:
+
         input_state = {
             "user_message": payload.user_message,
             "lat": payload.lat,
             "lon": payload.lon
         }
-    
-        hasil_workflow = langgraph_app.invoke(input_state)
 
-        print("[API] Pemrosesan Multi-Agent selesai. Mengirimkan response balik...")
+        hasil = langgraph_app.invoke(
+            input_state
+        )
+
+        print("\n========== HASIL GRAPH ==========")
+
+        print(f"Intent          : {hasil.get('intent')}")
+        print(f"Disaster Type   : {hasil.get('disaster_type')}")
+        print(f"Confidence      : {hasil.get('confidence')}")
+        print(f"Action          : {hasil.get('action')}")
+        print(f"Kategori        : {hasil.get('kategori_laporan')}")
+        print(f"Eskalasi        : {hasil.get('eskalasi_posko')}")
+
+        print("=================================\n")
 
         return LaporanResponse(
-            intent=hasil_workflow.get("intent", "info"),
-            final_response=hasil_workflow.get("final_response", "Sistem sedang memproses..."),
-            eskalasi_posko=hasil_workflow.get("eskalasi_posko", False),
-            kategori_laporan=hasil_workflow.get("kategori_laporan", "pencarian informasi")
-    )
+
+            intent=hasil.get(
+                "intent",
+                "lainnya"
+            ),
+
+            disaster_type=hasil.get(
+                "disaster_type",
+                "lainnya"
+            ),
+
+            confidence=hasil.get(
+                "confidence",
+                0.0
+            ),
+
+            action=hasil.get(
+                "action",
+                "reject"
+            ),
+
+            final_response=hasil.get(
+                "final_response",
+                "Terjadi kesalahan."
+            ),
+
+            eskalasi_posko=hasil.get(
+                "eskalasi_posko",
+                False
+            ),
+
+            kategori_laporan=hasil.get(
+                "kategori_laporan",
+                "bukan laporan"
+            )
+
+        )
 
     except Exception as e:
-        print(f"[API ERROR] terjadi kesalahan saat memproses laporan: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
-    
-#local server
+
+        print("\n========== ERROR ==========")
+
+        print(str(e))
+
+        print("===========================\n")
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
+# run
 if __name__ == "__main__":
-    # host 0.0.0.0, android 1 wi-fi
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True
+    )

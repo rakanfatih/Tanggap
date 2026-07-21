@@ -1,63 +1,192 @@
 import os
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import BaseModel, Field
 
 load_dotenv()
 
-#output akhir
+# output
 class ExecutorOutput(BaseModel):
-    balasan_warga: str = Field(description="pesan balasan dalam bahasa Indonesia yang natural, ringkas, dan mudah dipahami warga. berikan instruksi yang jelas.")
-    eskalasi_posko: bool = Field(description="true jika ini laporan darurat yang butuh penanganan fisik tim posko, false jika ini hanya pertanyaan info atau spam.")
-    kategori_laporan: str = Field(description="pilih salah satu: 'insiden terverifikasi', 'perlu tinjauan', atau 'bukan laporan'")
 
-def execute_response(intent: str, user_message: str, context_data: str = "", validation_data: dict = None):
-    print("agen Eksekutor sedang merumuskan keputusan akhir...")
+    final_response: str = Field(
+        description="Pesan akhir yang dikirim kepada warga."
+    )
 
-    #interception
-    if validation_data:
-        status_validasi = validation_data.get("status_validasi", "").lower()
-        if "hoax" in status_validasi:
-            cuaca = validation_data.get("kondisi_cuaca_aktual", "cerah")
-            print("[EKSEKUTOR] Laporan terdeteksi HOAX. Memblokir dari posko BPBD...")
-            
-            return ExecutorOutput(
-                balasan_warga=f"PERINGATAN: Berdasarkan sensor satelit cuaca, lokasi Anda saat ini terpantau {cuaca}. Tidak ada indikasi hujan. Sistem menolak laporan Anda. Mohon jangan mengirimkan laporan palsu ke layanan darurat BPBD.",
-                eskalasi_posko=False,
-                kategori_laporan="bukan laporan" 
-            )
+# exeutor agent
+def execute_response(
+    user_message: str,
+    intent: str,
+    action: str,
+    kategori_laporan: str,
+    reason: str,
+    context: str = ""
+):
 
-    #inisialisasi llm
-    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2)
-    structured_llm = llm.with_structured_output(ExecutorOutput)
+    print("\n==============================")
+    print("[EXECUTOR AGENT]")
+    print("==============================")
 
-    #prompt
+    print(f"Intent     : {intent}")
+    print(f"Action     : {action}")
+    print(f"Kategori   : {kategori_laporan}")
+
+    llm = ChatGroq(
+        model="llama-3.3-70b-versatile",
+        temperature=0.2
+    )
+
+    structured_llm = llm.with_structured_output(
+        ExecutorOutput
+    )
+
     system_prompt = """
-    Kamu adalah GARDA, agen pusat di sistem penanggulangan banjir BPBD Jakarta.
-    Tugasmu adalah memberikan balasan akhir yang natural, empatik, dan interaktif kepada warga berdasarkan data yang dikumpulkan.
-    
-    ATURAN SANGAT KETAT:
-    1. JANGAN berhalusinasi. Fakta dan instruksi HARUS berasal dari 'Konteks SOP' atau 'Data Validasi'.
-    2. Modifikasi gaya bahasa SOP agar terdengar seperti asisten manusia yang peduli dan suportif. Jangan sekadar menyalin mentah-mentah (copy-paste).
-    3. Jika warga memberikan konteks (misal: "saya sudah matikan listrik"), hargai tindakan mereka terlebih dahulu sebelum memberikan instruksi selanjutnya.
-    4. JIKA intent = 'lapor_darurat': Berikan instruksi keselamatan pertama dengan ringkas (evakuasi, dll) berdasarkan SOP. Set eskalasi_posko ke True.
-    5. JIKA intent = 'tanya_info': Jawab pertanyaan warga berdasarkan 'Konteks SOP'. Jika warga menanyakan lokasi/kontak, sebutkan nama lokasi dan alamatnya secara jelas dari konteks.
-    """
+        Kamu adalah Executor Agent pada sistem koordinasi bencana BPBD.
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        ("human", "Intent: {intent}\nPesan Warga: {user_message}\nKonteks SOP: {context_data}\nData Validasi: {validation_data}")
-    ])
+        Tugasmu BUKAN mengambil keputusan.
 
-    #rangkai prompt dan eksekusi
+        Keputusan sistem sudah diberikan oleh Decision Agent.
+
+        Tugasmu hanya menyusun balasan akhir yang natural,
+        jelas,
+        singkat,
+        empatik,
+        dan mudah dipahami masyarakat.
+
+        ==================================================
+
+        ATURAN
+
+        ==================================================
+
+        1.
+        JANGAN mengubah Action.
+
+        2.
+        JANGAN mengubah Kategori Laporan.
+
+        3.
+        Jika Action = reject
+
+        Jelaskan dengan sopan bahwa aplikasi hanya menangani
+        laporan dan informasi mengenai banjir.
+
+        Jangan memberikan SOP.
+
+        ==================================================
+
+        4.
+        Jika Action = respond
+        dan Intent = tanya_info
+
+        Jawab menggunakan Context.
+
+        Jika Context kosong,
+        katakan informasi belum tersedia.
+
+        ==================================================
+
+        5.
+        Jika Action = respond
+        dan Kategori = perlu tinjauan
+
+        Sampaikan bahwa laporan telah diterima,
+        namun masih memerlukan verifikasi operator BPBD.
+
+        Jangan mengatakan laporan telah diteruskan ke Posko.
+
+        ==================================================
+
+        6.
+        Jika Action = escalate
+
+        Sampaikan bahwa laporan telah diterima
+        dan telah diteruskan kepada Posko BPBD.
+
+        Berikan instruksi keselamatan awal
+        berdasarkan Context.
+
+        ==================================================
+
+        7.
+        Jangan membuat fakta baru.
+
+        Gunakan HANYA informasi pada Context.
+
+        ==================================================
+
+        8.
+        Gunakan bahasa Indonesia yang natural,
+        ramah,
+        dan profesional.
+
+        Jangan terlalu panjang.
+        """
+
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system_prompt),
+            (
+                "human",
+                """
+                Pesan Warga:
+                {user_message}
+
+                Intent:
+                {intent}
+
+                Action:
+                {action}
+
+                Kategori:
+                {kategori_laporan}
+
+                Alasan:
+                {reason}
+
+                Context:
+                {context}
+                """
+            )
+        ]
+    )
+
     chain = prompt | structured_llm
-    
-    result = chain.invoke({
-        "intent": intent,
-        "user_message": user_message,
-        "context_data": context_data,
-        "validation_data": validation_data if validation_data else "Tidak ada data validasi"
-    })
-    
-    return result
+
+    hasil = chain.invoke(
+        {
+            "user_message": user_message,
+            "intent": intent,
+            "action": action,
+            "kategori_laporan": kategori_laporan,
+            "reason": reason,
+            "context": context
+        }
+    )
+
+    print("\n===== HASIL EXECUTOR =====")
+    print(hasil.final_response)
+
+    return hasil
+
+
+# test
+if __name__ == "__main__":
+
+    hasil = execute_response(
+        user_message="Rumah saya kebanjiran.",
+        intent="lapor_darurat",
+        action="escalate",
+        kategori_laporan="insiden terverifikasi",
+        reason="validation score tinggi",
+        context="""
+        Segera menuju tempat yang lebih tinggi.
+
+        Matikan aliran listrik apabila masih aman dilakukan.
+
+        Ikuti arahan petugas BPBD.
+        """
+    )
+
+    print("\n===== OUTPUT =====")
+    print(hasil.model_dump())

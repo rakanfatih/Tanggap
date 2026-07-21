@@ -1,114 +1,225 @@
 from typing import TypedDict, Optional
 from langgraph.graph import StateGraph, END
-
-#import function agent
 from agents.router_agent import route_message
 from agents.validator_agent import validasi_laporan
 from agents.retriever_agent import retrieve_sop_info
+from agents.decision_agent import make_decision
 from agents.executor_agent import execute_response
-#state
+
+# graph state
 class GraphState(TypedDict):
+
+    # input
     user_message: str
     lat: Optional[float]
     lon: Optional[float]
-    intent: Optional[str] #hasil router agent
-    validation_data: Optional[dict] #hasil validator agent
-    context_data: Optional[str] #hasil retriever agent
-    
-    #hasil akhir executor agent
-    final_response: Optional[str]
+
+    # router
+    intent: Optional[str]
+    disaster_type: Optional[str]
+    confidence: Optional[float]
+    router_reason: Optional[str]
+
+    # validator
+    validation_data: Optional[dict]
+
+    # retriever
+    retrieval_data: Optional[dict]
+
+    # decision
+    action: Optional[str]
     eskalasi_posko: Optional[bool]
-    kategori_laporan: Optional[str] 
+    kategori_laporan: Optional[str]
+    decision_reason: Optional[str]
 
-#node
-def node_router(state:GraphState):
-    print("\n[NODE] masuk ke agen router...")
-    hasil_router = route_message(state["user_message"])
-    return {"intent" : hasil_router.intent}
+    # executor
+    final_response: Optional[str]
 
-def node_validator(state:GraphState):
-    print("\n[NODE] masuk ke agen validator...")
-    #jika gps tidak aktif, nilai default = 0.0
-    lat = state.get("lat") or 0.0
-    lon = state.get("lon") or 0.0
-    hasil_validasi = validasi_laporan(state["user_message"], lat, lon)
-    return {"validation_data": hasil_validasi}
+# router node
+def node_router(state: GraphState):
 
-def node_retriever(state:GraphState):
-    print("\n[NODE] masuk ke agen retriever...")
-    teks_sop_mentah = retrieve_sop_info(state["user_message"])
-    return {"context_data": teks_sop_mentah}
+    print("\n[NODE] Router")
 
-
-def node_executor(state:GraphState):
-    print("\n[NODE] masuk ke agen executor...")
-    hasil_eksekutor = execute_response(
-        intent=state.get("intent", "lainnya"),
-        user_message=state["user_message"],
-        context_data=state.get("context_data", ""),
-        validation_data=state.get("validation_data", None)
+    hasil = route_message(
+        state["user_message"]
     )
+
     return {
-        "final_response": hasil_eksekutor.balasan_warga,
-        "eskalasi_posko": hasil_eksekutor.eskalasi_posko,
-        "kategori_laporan": hasil_eksekutor.kategori_laporan
+        "intent": hasil.intent,
+        "disaster_type": hasil.disaster_type,
+        "confidence": hasil.confidence,
+        "router_reason": hasil.alasan
     }
 
-#logika pemilah jalur
-def route_after_classification(state: GraphState):
-    intent = state.get("intent")
+# validator node
+def node_validator(state: GraphState):
+
+    print("\n[NODE] Validator")
+
+    hasil = validasi_laporan(
+        user_message=state["user_message"],
+        lat=state.get("lat", 0.0),
+        lon=state.get("lon", 0.0)
+    )
+
+    return {
+        "validation_data": hasil
+    }
+
+# retriever node
+def node_retriever(state: GraphState):
+
+    print("\n[NODE] Retriever")
+
+    hasil = retrieve_sop_info(
+        query=state["user_message"]
+    )
+
+    return {
+        "retrieval_data": hasil
+    }
+
+# decision node
+def node_decision(state: GraphState):
+
+    print("\n[NODE] Decision")
+
+    validation_score = None
+
+    if state.get("validation_data"):
+        validation_score = state["validation_data"]["validation_score"]
+
+    hasil = make_decision(
+        intent=state["intent"],
+        disaster_type=state["disaster_type"],
+        validation_score=validation_score
+    )
+
+    return {
+        "action": hasil.action,
+        "eskalasi_posko": hasil.eskalasi_posko,
+        "kategori_laporan": hasil.kategori_laporan,
+        "decision_reason": hasil.reason
+    }
+
+# executor node
+def node_executor(state: GraphState):
+
+    print("\n[NODE] Executor")
+
+    context = ""
+
+    if state.get("retrieval_data"):
+        context = state["retrieval_data"]["context"]
+
+    hasil = execute_response(
+        user_message=state["user_message"],
+        intent=state["intent"],
+        action=state["action"],
+        kategori_laporan=state["kategori_laporan"],
+        reason=state["decision_reason"],
+        context=context
+    )
+
+    return {
+        "final_response": hasil.final_response
+    }
+
+# routing
+def router_condition(state: GraphState):
+
+    intent = state["intent"]
+
     if intent == "lapor_darurat":
         return "validator"
     elif intent == "tanya_info":
         return "retriever"
     else:
-        return "executor" #kalau spam atau kategori 'lainnya'
+        return "decision"
 
-#bangun grafik
+# build  
 workflow = StateGraph(GraphState)
 
-#tambah node
-workflow.add_node("router", node_router)
-workflow.add_node("validator", node_validator)
-workflow.add_node("retriever", node_retriever)
-workflow.add_node("executor", node_executor)
+workflow.add_node(
+    "router",
+    node_router
+)
 
-workflow.set_entry_point("router") #titik masuk
-#conditional edges
+workflow.add_node(
+    "validator",
+    node_validator
+)
+
+workflow.add_node(
+    "retriever",
+    node_retriever
+)
+
+workflow.add_node(
+    "decision",
+    node_decision
+)
+
+workflow.add_node(
+    "executor",
+    node_executor
+)
+
+workflow.set_entry_point(
+    "router"
+)
+
 workflow.add_conditional_edges(
     "router",
-    route_after_classification,
+    router_condition,
     {
-        "validator": "validator", #if return validator = jalan ke node validator
-        "retriever": "retriever", #if return retriever =  jalan ke node retriever
-        "executor": "executor"   #if return executor = jalan ke node executor
+        "validator": "validator",
+        "retriever": "retriever",
+        "decision": "decision"
     }
 )
 
-#normal edges
-workflow.add_edge("validator", "executor")
-workflow.add_edge("retriever", "executor") 
-workflow.add_edge("executor", END) 
+workflow.add_edge(
+    "validator",
+    "decision"
+)
+
+workflow.add_edge(
+    "retriever",
+    "decision"
+)
+
+workflow.add_edge(
+    "decision",
+    "executor"
+)
+
+workflow.add_edge(
+    "executor",
+    END
+)
 
 app = workflow.compile()
 
-#pengujian
+# test
 if __name__ == "__main__":
-    print("="*50)
-    print("PENGUJIAN SISTEM SECARA KESELURUHAN")
-    print("="*50)
-    
-    #contoh input dari warga
-    input_awal = {
-        "user_message": "Tolong bantu, ada banjir besar di daerah saya!",
-        "lat": -6.200000,
-        "lon": 106.816666
-    }
 
-    hasil_akhir = app.invoke(input_awal)
+    hasil = app.invoke(
+        {
+            "user_message": "Rumah saya kebanjiran.",
+            "lat": -6.200000,
+            "lon": 106.816666
+        }
+    )
 
-    print("HASIL AKHIR:")
-    print("Intent: ", hasil_akhir.get("intent"))
-    print("Balasan untuk Warga: ", hasil_akhir.get("final_response"))
-    print("Eskalasi ke Posko:", hasil_akhir.get("eskalasi_posko"))
-    print("Kategori Laporan:", hasil_akhir.get("kategori_laporan"))
+    print("\n==============================")
+    print("HASIL AKHIR")
+    print("==============================")
+
+    print(f"Intent               : {hasil.get('intent')}")
+    print(f"Disaster Type        : {hasil.get('disaster_type')}")
+    print(f"Confidence           : {hasil.get('confidence')}")
+    print(f"Action               : {hasil.get('action')}")
+    print(f"Eskalasi Posko       : {hasil.get('eskalasi_posko')}")
+    print(f"Kategori             : {hasil.get('kategori_laporan')}")
+    print(f"Final Response       : {hasil.get('final_response')}")

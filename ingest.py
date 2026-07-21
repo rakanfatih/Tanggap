@@ -5,6 +5,10 @@ from langchain_community.document_loaders import PyPDFDirectoryLoader, CSVLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+VECTOR_DB_PATH = BASE_DIR / "vector_db"
 
 load_dotenv()
 
@@ -42,7 +46,7 @@ def create_vector_db():
     vector_store = Chroma.from_documents(
         documents=chunks,
         embedding=embeddings,
-        persist_directory="./vector_db"    
+        persist_directory=str(VECTOR_DB_PATH)    
     )
 
     print("vector db berhasil diperbarui")
