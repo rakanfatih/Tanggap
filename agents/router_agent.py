@@ -1,57 +1,177 @@
 import os
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import BaseModel, Field
 
 load_dotenv()
 
-#output yang diharapkan
+# output 
 class RouterOutput(BaseModel):
-    intent: str =  Field(description="Pilih satu secara persis: 'lapor_darurat','tanya_info', atau 'lainnya'")
-    alasan: str = Field(description="Alasan mengapa memilih intent tersebut")
 
+    intent: str = Field(
+        description="hanya boleh berisi: lapor_darurat, tanya_info, atau lainnya"
+    )
+
+    disaster_type: str = Field(
+        description="jenis bencana: banjir, gempa, longsor, kebakaran, tsunami, angin, kriminalitas, kecelakaan, spam, lainnya"
+    )
+
+    confidence: float = Field(
+        description="nilai keyakinan 0 sampai 1"
+    )
+
+    alasan: str = Field(
+        description="alasan klasifikasi"
+    )
+
+# router agent
 def route_message(user_message: str):
-    print("analisis pesan user ...")
 
-    #inisialisasi model
-    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
-    
-    #paksa mengikuti instruksi
-    structured_llm = llm.with_structured_output(RouterOutput)
+    print("\n==============================")
+    print("[ROUTER AGENT]")
+    print("==============================")
 
-    #template prompt
+    llm = ChatGroq(
+        model="llama-3.3-70b-versatile",
+        temperature=0
+    )
+
+    structured_llm = llm.with_structured_output(
+        RouterOutput
+    )
+
     system_prompt = """
-    kamu adalah agen pemilah di sistem penanggulangan banjir BPBD Jakarta. tugasmu HANYA membaca pesan warga dan mengklasifikasikan intent mereka.
-    
-    Kategori Aturan SANGAT KETAT:
-    - 'lapor_darurat': HANYA KHUSUS untuk laporan keadaan darurat BANJIR (contoh: air naik, rumah kebanjiran, terjebak banjir, tanggul jebol). 
-    - 'tanya_info': jika pesan berisikan pertanyaan tentang cara evakuasi banjir, lokasi posko, SOP, atau nomor darurat.
-    - 'lainnya': jika pesan TIDAK TERKAIT BANJIR (contoh: gempa bumi, kebakaran, kecelakaan, perampokan), atau berupa spam, sapaan biasa, dan curhat.
-    """
+        Kamu adalah Router Agent pada sistem koordinasi bencana BPBD.
+
+        Tugasmu HANYA mengklasifikasikan pesan warga.
+
+        ==================================================
+        INTENT
+        ==================================================
+
+        Hanya boleh memilih SATU:
+        1. lapor_darurat
+        2. tanya_info
+        3. lainnya
+
+        ==================================================
+        ATURAN LAPOR_DARURAT
+        ==================================================
+
+        Pilih "lapor_darurat" HANYA jika warga melaporkan kejadian BANJIR.
+        Contoh:
+        - rumah kebanjiran
+        - air masuk rumah
+        - genangan tinggi
+        - sungai meluap
+        - tanggul jebol
+        - banjir besar
+        - terjebak banjir
+        - butuh evakuasi banjir
+
+        ==================================================
+        ATURAN TANYA_INFO
+        ==================================================
+
+        Jika warga bertanya mengenai:
+        - SOP banjir
+        - evakuasi banjir
+        - nomor darurat
+        - lokasi posko
+        - bantuan banjir
+        - langkah menghadapi banjir
+
+        ==================================================
+        LAINNYA
+        ==================================================
+
+        SEMUA kondisi berikut WAJIB memilih "lainnya":
+        - gempa
+        - tsunami
+        - longsor
+        - kebakaran
+        - angin puting beliung
+        - pohon tumbang
+        - kriminalitas
+        - kecelakaan
+        - kehilangan
+        - spam
+        - candaan
+        - salam
+        - percakapan biasa
+
+        ==================================================
+        DISASTER TYPE
+        ==================================================
+
+        Pilih salah satu:
+        banjir
+        gempa
+        tsunami
+        longsor
+        kebakaran
+        angin
+        kriminalitas
+        kecelakaan
+        spam
+        lainnya
+
+        ==================================================
+        PENTING
+        ==================================================
+
+        Jika pesan membahas GEMPA,
+        MAKA:
+        intent = lainnya
+        disaster_type = gempa
+
+        JANGAN PERNAH memilih lapor_darurat.
+
+        Hal yang sama berlaku untuk kebakaran,
+        longsor,
+        tsunami,
+        dan bencana selain banjir.
+
+        Jangan pernah berhalusinasi.
+
+        Jawab sesuai schema.
+        """
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
-        ("human", "Pesan user: {user_message}")
+        ("human", "{user_message}")
     ])
 
-    #hubungkan prompt ke AI
     chain = prompt | structured_llm
 
-    result = chain.invoke({"user_message": user_message})
+    result = chain.invoke({
+        "user_message": user_message
+    })
+
+    print(f"Intent: {result.intent}")
+    print(f"Disaster Type: {result.disaster_type}")
+    print(f"Confidence: {result.confidence}")
+    print(f"Reason: {result.alasan}")
+
     return result
 
-#uji lokal
-if __name__ == "__main__":
-    #sekanrio 1, laporan darurat
-    pesan_1 = "Tolong, air sudah masuk rumah saya, saya terjebak di lantai 2, butuh bantuan evakuasi!"
-    print(f"\nPesan: {pesan_1}")
-    hasil_1 = route_message(pesan_1)
-    print(f"Hasil: {hasil_1}\n")
-    print("-" * 40)
 
-    #sekanrio 2, tanya informasi
-    pesan_2 = "kalau air mulai naik ke teras, apa yang pertama kali harus dilakukan?"
-    print(f"\nPesan: {pesan_2}")
-    hasil_2 = route_message(pesan_2)
-    print(f"Hasil: {hasil_2}\n")
+if __name__ == "__main__":
+
+    tests = [
+        "Rumah saya kebanjiran.",
+        "Ada gempa bumi besar.",
+        "Posko dimana?",
+        "Halo",
+        "Tolong air sudah masuk rumah saya.",
+        "Terjadi kebakaran."
+    ]
+
+    for t in tests:
+
+        print("\n====================================")
+        print(t)
+
+        hasil = route_message(t)
+        print(hasil.model_dump())

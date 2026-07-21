@@ -2,46 +2,96 @@ import os
 from dotenv import load_dotenv
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+VECTOR_DB_PATH = BASE_DIR / "vector_db"
 
 load_dotenv()
 
-def retrieve_sop_info(query: str):
-    print(f"agen pemilah sedang mencari informasi untuk: '{query} ...")
+# retriever agent
+def retrieve_sop_info(
+    query: str,
+    k: int = 5
+):
 
-    #panggil model embedding
-    embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-m3")
+    print("\n==============================")
+    print("[RETRIEVER AGENT]")
+    print("==============================")
 
-    #buka vector db
+    print(f"Query : {query}")
+
+    embeddings = HuggingFaceEmbeddings(
+        model_name="BAAI/bge-m3"
+    )
+
     try:
+
         vectorstore = Chroma(
-            persist_directory="./vector_db",
+            persist_directory=str(VECTOR_DB_PATH),
             embedding_function=embeddings
         )
+
     except Exception as e:
-        return "error: database vector belum tersedia. jalankan ingest.py terlebih dahulu."
-    
-    #similarity search
-    search_result = vectorstore.similarity_search(query, k=3)
 
-    #if tidak ada hasil
-    if not search_result:
-        return "maaf, tidak ada informasi terkait SOP atau pedoman tersebut di dalam database."
-    
-    #gabungkan hasil jadi 1 teks panjang
+        print(f"[RETRIEVER] Error membuka VectorDB : {e}")
+
+        return {
+            "context": "",
+            "total_references": 0
+        }
+
+    try:
+
+        documents = vectorstore.similarity_search(
+            query,
+            k=k
+        )
+
+    except Exception as e:
+
+        print(f"[RETRIEVER] Error similarity search : {e}")
+
+        return {
+            "context": "",
+            "total_references": 0
+        }
+
+    if not documents:
+
+        print("[RETRIEVER] Tidak ada referensi ditemukan.")
+
+        return {
+            "context": "",
+            "total_references": 0
+        }
+
     context = ""
-    for i, doc in enumerate(search_result):
-        context += f"[Referensi {i+1}]:\n{doc.page_content}\n\n"
 
-    return context 
+    for i, doc in enumerate(documents):
 
-#uji lokal
+        context += (
+            f"[Referensi {i+1}]\n"
+            f"{doc.page_content}\n\n"
+        )
+
+    print(f"Total Referensi : {len(documents)}")
+
+    return {
+        "context": context,
+        "total_references": len(documents)
+    }
+
+
+# test
 if __name__ == "__main__":
-    #sekanrio: uji pertanyaan dari router agent
-    pertanyaan_warga = "kalau air mulai naik ke teras, apa yang pertama kali harus dilakukan?"
 
-    print("-" * 40)
-    hasil_konteks = retrieve_sop_info(pertanyaan_warga)
+    hasil = retrieve_sop_info(
 
-    print("\n--- HASIL PENCARIAN DARI BUKU SAKU/SOP ---")
-    print(hasil_konteks)
-    
+        "Apa yang harus dilakukan ketika banjir?"
+
+    )
+
+    print("\n===== CONTEXT =====\n")
+    print(hasil["context"])
+    print(f"\nJumlah Referensi : {hasil['total_references']}")

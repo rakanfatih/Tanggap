@@ -4,81 +4,202 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# VALIDASI CUACA  
-def cek_cuaca_aktual(lat: float, lon: float) -> str:
-    #ambil data cuaca dari openweathermap
+# cek cuaca
+def cek_cuaca_aktual(lat: float, lon: float):
+
     api_key = os.getenv("OPENWEATHER_API_KEY")
 
     if not api_key or api_key == "masukkan api key weather di sini":
-        return "simulasi cuaca: hujan lebat"
-    
-    #endpoint api openweathermap
-    url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric&lang=id"
+        return {
+            "weather": "simulasi hujan lebat",
+            "temperature": 28,
+            "is_raining": True
+        }
+
+    url = (
+        "https://api.openweathermap.org/data/2.5/weather"
+        f"?lat={lat}&lon={lon}"
+        f"&appid={api_key}"
+        "&units=metric"
+        "&lang=id"
+    )
 
     try:
+
         response = requests.get(url, timeout=5)
         data = response.json()
 
-        if response.status_code == 200:
-            cuaca = data['weather'][0]['description']
-            suhu = data['main']['temp']
-            return f"{cuaca.capitalize()}, Suhu: {suhu}°C"
-        else:
-            return f"gagal mengambil cuaca: {data.get('message', 'error tidak diketahui')}"
-    except Exception as e:
-        return f"terjadi kesalahan koneksi: {e}"
+        if response.status_code != 200:
 
-#VALIDASI LOKASI
-def cek_lokasi_aktual(lat: float, lon: float) -> str:
+            return {
+                "weather": "tidak diketahui",
+                "temperature": None,
+                "is_raining": False
+            }
+
+        cuaca = data["weather"][0]["description"]
+        suhu = data["main"]["temp"]
+
+        kata_hujan = [
+            "hujan",
+            "gerimis",
+            "lebat",
+            "badai",
+            "rain",
+            "drizzle",
+            "storm",
+            "thunderstorm"
+        ]
+
+        is_raining = any(
+            kata in cuaca.lower()
+            for kata in kata_hujan
+        )
+
+        return {
+            "weather": cuaca.capitalize(),
+            "temperature": suhu,
+            "is_raining": is_raining
+        }
+
+    except Exception as e:
+
+        print(f"[VALIDATOR] Error cuaca: {e}")
+
+        return {
+            "weather": "Tidak diketahui",
+            "temperature": None,
+            "is_raining": False
+        }
+
+# cek lokasi
+def cek_lokasi_aktual(lat: float, lon: float):
+
     api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
-    # fallback  
     if not api_key or api_key == "masukkan api key google maps di sini":
-        return "Simulasi Lokasi: Jl. Margonda Raya, Kota Depok, Jawa Barat"
-    
-    url = f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lon}&key={api_key}"
+
+        return {
+            "address": "simulasi lokasi: Jl. Margonda Raya, Kota Depok",
+            "gps_valid": True
+        }
+
+    url = (
+        "https://maps.googleapis.com/maps/api/geocode/json"
+        f"?latlng={lat},{lon}"
+        f"&key={api_key}"
+    )
 
     try:
+
         response = requests.get(url, timeout=5)
+
         data = response.json()
 
-        if data['status'] == 'OK':
-            alamat_lengkap = data['results'][0]['formatted_address']
-            return alamat_lengkap
-        elif data['status'] == 'ZERO_RESULTS':
-            return "gagal dilacak: Lokasi fiktif atau tidak terdaftar di peta (kemungkinan koordinat palsu)."
-        else:
-            return f"gagal melacak lokasi: Status {data['status']}"
+        if data["status"] != "OK":
+
+            return {
+                "address": "lokasi tidak ditemukan",
+                "gps_valid": False
+            }
+
+        alamat = data["results"][0]["formatted_address"]
+
+        return {
+            "address": alamat,
+            "gps_valid": True
+        }
+
     except Exception as e:
-        return f"terjadi kesalahan koneksi peta: {e}"
-    
-def validasi_laporan(user_message: str, lat: float, lon: float):
-    #verifikasi laporan berdasarkan lokasi dan cuaca
-    print(f"agen validator sedang mengecek titik koordinat [{lat}, {lon}]...")
 
-    #panggil function cek cuaca
-    status_cuaca = cek_cuaca_aktual(lat, lon)
-    alamat_lokasi = cek_lokasi_aktual(lat, lon)
+        print(f"[VALIDATOR] Error lokasi: {e}")
 
-    print(f"[VALIDATOR] Hasil dari satelit OpenWeather: {status_cuaca}")
-    print(f"[VALIDATOR] Hasil Pelacakan Peta : {alamat_lokasi}")
+        return {
+            "address": "lokasi tidak diketahui",
+            "gps_valid": False
+        }
 
-    is_hujan = any(kata in status_cuaca.lower() for kata in ["hujan", "gerimis", "lebat", "badai"])
-    is_lokasi_nyata = "gagal" not in alamat_lokasi.lower()
+# hitung skor
+def hitung_validation_score(
+    gps_valid: bool,
+    is_raining: bool,
+    address: str
+):
 
-    if is_hujan and is_lokasi_nyata:
-        tingkat_validitas = "tinggi"
-        print("[VALIDATOR] Kesimpulan: Valid (Cuaca Mendukung & Lokasi Nyata)")
-    else:
-        tingkat_validitas = "rendah (terindikasi hoax)"
-        print("[VALIDATOR] Kesimpulan: INDIKASI HOAX (Cuaca Cerah / Lokasi Fiktif)")
+    score = 0
 
-    hasil_validasi = {
+    if gps_valid:
+        score += 40
+
+    if is_raining:
+        score += 40
+
+    if address.lower() not in [
+        "lokasi tidak ditemukan",
+        "lokasi tidak diketahui"
+    ]:
+        score += 20
+
+    return score
+
+# validator agen
+def validasi_laporan(
+    user_message: str,
+    lat: float,
+    lon: float
+):
+
+    print("\n==============================")
+    print("[VALIDATOR AGENT]")
+    print("==============================")
+
+    print(f"Koordinat : [{lat}, {lon}]")
+
+    hasil_cuaca = cek_cuaca_aktual(lat, lon)
+
+    hasil_lokasi = cek_lokasi_aktual(lat, lon)
+
+    validation_score = hitung_validation_score(
+        gps_valid=hasil_lokasi["gps_valid"],
+        is_raining=hasil_cuaca["is_raining"],
+        address=hasil_lokasi["address"]
+    )
+
+    hasil = {
         "pesan_asli": user_message,
-        "koordinat_gps": f"[{lat}, {lon}]",
-        "alamat_lengkap": alamat_lokasi,      
-        "kondisi_cuaca_aktual": status_cuaca,
-        "status_validasi": tingkat_validitas
+
+        "koordinat": {
+            "latitude": lat,
+            "longitude": lon
+        },
+
+        "alamat_lengkap": hasil_lokasi["address"],
+        "gps_valid": hasil_lokasi["gps_valid"],
+        "kondisi_cuaca": hasil_cuaca["weather"],
+        "suhu": hasil_cuaca["temperature"],
+        "is_hujan": hasil_cuaca["is_raining"],
+        "validation_score": validation_score
     }
 
-    return hasil_validasi
+    print("\n===== HASIL VALIDASI =====")
+
+    print(f"Alamat            : {hasil['alamat_lengkap']}")
+    print(f"GPS Valid         : {hasil['gps_valid']}")
+    print(f"Cuaca             : {hasil['kondisi_cuaca']}")
+    print(f"Hujan             : {hasil['is_hujan']}")
+    print(f"Validation Score  : {hasil['validation_score']}")
+
+    return hasil
+
+# test
+if __name__ == "__main__":
+
+    hasil = validasi_laporan(
+        user_message="Rumah saya kebanjiran.",
+        lat=-6.200000,
+        lon=106.816666
+    )
+
+    print("\n===== OUTPUT =====")
+
+    print(hasil)
