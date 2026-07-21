@@ -3,6 +3,10 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
 from graph_workflow import app as langgraph_app
+from sqlalchemy.orm import Session
+from fastapi import Depends
+from database.database import get_db
+from database.crud import simpan_laporan
 
 # FastAPI  
 app = FastAPI(
@@ -47,7 +51,8 @@ class LaporanResponse(BaseModel):
 )
 
 async def proses_laporan(
-    payload: LaporanRequest
+    payload: LaporanRequest,
+    db: Session = Depends(get_db)
 ):
 
     print("\n===================================")
@@ -80,6 +85,57 @@ async def proses_laporan(
         print(f"Eskalasi        : {hasil.get('eskalasi_posko')}")
 
         print("=================================\n")
+
+        # simpan to database
+        simpan_laporan(
+            db=db,
+            data={
+                "pesan": payload.user_message,
+                "latitude": payload.lat,
+                "longitude": payload.lon,
+
+                "intent": hasil.get(
+                    "intent",
+                    "lainnya"
+                ),
+
+                "disaster_type": hasil.get(
+                    "disaster_type",
+                    "lainnya"
+                ),
+
+                "confidence": hasil.get(
+                    "confidence",
+                    0.0
+                ),
+
+                "validation_score": hasil.get(
+                    "validation_score",
+                    0
+                ),
+
+                "action": hasil.get(
+                    "action",
+                    "reject"
+                ),
+
+                "kategori_laporan": hasil.get(
+                    "kategori_laporan",
+                    "bukan laporan"
+                ),
+
+                "eskalasi_posko": hasil.get(
+                    "eskalasi_posko",
+                    False
+                ),
+
+                "final_response": hasil.get(
+                    "final_response",
+                    "Terjadi kesalahan."
+                )
+
+            }
+        )
 
         return LaporanResponse(
 
@@ -123,9 +179,7 @@ async def proses_laporan(
     except Exception as e:
 
         print("\n========== ERROR ==========")
-
         print(str(e))
-
         print("===========================\n")
 
         raise HTTPException(

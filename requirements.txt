@@ -18,3 +18,6 @@ requests
 
 # env management
 python-dotenv
+
+# database
+sqlalchemy

@@ -1,4 +1,4 @@
-from typing import TypedDict, Optional
+from typing import TypedDict
 from langgraph.graph import StateGraph, END
 from agents.router_agent import route_message
 from agents.validator_agent import validasi_laporan
@@ -21,10 +21,16 @@ class GraphState(TypedDict):
     router_reason: Optional[str]
 
     # validator
-    validation_data: Optional[dict]
+    validation_score: Optional[int]
+    gps_valid: Optional[bool]
+    alamat_lengkap: Optional[str]
+    kondisi_cuaca: Optional[str]
+    suhu: Optional[float]
+    is_hujan: Optional[bool]
 
     # retriever
-    retrieval_data: Optional[dict]
+    context: Optional[str]
+    total_references: Optional[int]
 
     # decision
     action: Optional[str]
@@ -63,7 +69,12 @@ def node_validator(state: GraphState):
     )
 
     return {
-        "validation_data": hasil
+        "validation_score": hasil["validation_score"],
+        "gps_valid": hasil["gps_valid"],
+        "alamat_lengkap": hasil["alamat_lengkap"],
+        "kondisi_cuaca": hasil["kondisi_cuaca"],
+        "suhu": hasil["suhu"],
+        "is_hujan": hasil["is_hujan"]
     }
 
 # retriever node
@@ -76,7 +87,8 @@ def node_retriever(state: GraphState):
     )
 
     return {
-        "retrieval_data": hasil
+        "context": hasil["context"],/
+        "total_references": hasil["total_references"]
     }
 
 # decision node
@@ -84,15 +96,10 @@ def node_decision(state: GraphState):
 
     print("\n[NODE] Decision")
 
-    validation_score = None
-
-    if state.get("validation_data"):
-        validation_score = state["validation_data"]["validation_score"]
-
     hasil = make_decision(
         intent=state["intent"],
         disaster_type=state["disaster_type"],
-        validation_score=validation_score
+        validation_score=state.get("validation_score")
     )
 
     return {
@@ -107,18 +114,13 @@ def node_executor(state: GraphState):
 
     print("\n[NODE] Executor")
 
-    context = ""
-
-    if state.get("retrieval_data"):
-        context = state["retrieval_data"]["context"]
-
     hasil = execute_response(
         user_message=state["user_message"],
         intent=state["intent"],
         action=state["action"],
         kategori_laporan=state["kategori_laporan"],
         reason=state["decision_reason"],
-        context=context
+        context=state.get("context", "")
     )
 
     return {
