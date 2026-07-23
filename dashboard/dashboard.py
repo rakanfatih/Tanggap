@@ -1,47 +1,43 @@
-from flask import Flask, render_template, abort
-import sys
-from pathlib import Path
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.append(str(BASE_DIR))
-
-from database.database import SessionLocal
-from database.crud import(
-    get_all_laporan,
-    get_laporan_by_id
+import requests
+from flask import(
+    Flask,
+    render_template,
+    redirect,
+    request,
+    url_for,
+    abort
 )
     
 app = Flask(__name__)
 
+API_URL = "http://127.0.0.1:8000/api"
+
 @app.route("/")
 def index():
 
-    db = SessionLocal()
+    response = requests.get(
+        f"{API_URL}/laporan"
+    )
 
-    try:
-        laporan = get_all_laporan(db)
-        total = len(laporan)
+    laporan = response.json()
+    total = len(laporan)
+    terverifikasi = sum(
+        1
+        for item in laporan
+        if item["kategori_laporan"] == "insiden terverifikasi"
+    )
 
-        terverifikasi = sum(
-            1
-            for x in laporan
-            if x.kategori_laporan == "insiden terverifikasi"
-        )
+    review = sum(
+        1
+        for item in laporan
+        if item["kategori_laporan"] == "perlu tinjauan"
+    )
 
-        review = sum(
-            1
-            for x in laporan
-            if x.kategori_laporan == "perlu tinjauan"
-        )
-
-        bukan = sum(
-            1
-            for x in laporan
-            if x.kategori_laporan == "bukan laporan"
-        )
-
-    finally:
-        db.close()
+    bukan = sum(
+        1
+        for item in laporan
+        if item["kategori_laporan"] == "bukan laporan"
+    )
 
     return render_template(
         "index.html",
@@ -53,25 +49,36 @@ def index():
     )
 
 @app.route("/laporan/<int:laporan_id>")
-def detail_laporan(laporan_id):
+def detail(laporan_id):
 
-    db = SessionLocal()
+    response = requests.get(
+        f"{API_URL}/laporan/{laporan_id}"
+    )
 
-    try:
-        laporan = get_laporan_by_id(
-            db,
-            laporan_id
-        )
+    if response.status_code != 200:
+        abort(404)
 
-        if laporan is None:
-            abort(404)
-
-    finally:
-        db.close()
+    laporan = response.json()
 
     return render_template(
         "detail.html",
         laporan=laporan
+    )
+
+@app.post("/update-status/<int:laporan_id>")
+def update_status_laporan(laporan_id):
+
+    status = request.form["status"]
+
+    requests.put(
+        f"{API_URL}/laporan/{laporan_id}/status",
+        json={
+            "status": status
+        }
+    )
+
+    return redirect(
+        url_for("index")
     )
 
 if __name__ == "__main__":

@@ -6,13 +6,25 @@ from graph_workflow import app as langgraph_app
 from sqlalchemy.orm import Session
 from fastapi import Depends
 from database.database import get_db
-from database.crud import simpan_laporan
+from database.crud import simpan_laporan, get_all_laporan, get_laporan_by_id, update_status
+from fastapi.middleware.cors import CORSMiddleware
 
 # FastAPI  
 app = FastAPI(
     title="Tanggap Multi-Agent API",
     description="Backend API Sistem Koordinasi Bencana Banjir berbasis Multi-Agent",
     version="2.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:5000",
+        "http://localhost:5000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # request model 
@@ -44,12 +56,33 @@ class LaporanResponse(BaseModel):
     eskalasi_posko: bool
     kategori_laporan: str
 
+# dashboard model
+class DashboardLaporan(BaseModel):
+
+    id: int
+    waktu: str
+    pesan: str
+    latitude: float
+    longitude: float
+    intent: str
+    disaster_type: str
+    confidence: float
+    validation_score: int
+    action: str
+    kategori_laporan: str
+    eskalasi_posko: bool
+    final_response: str
+    status: str
+
+# update status mode
+class UpdateStatusRequest(BaseModel):
+    status: str
+
 # endpoint
 @app.post(
     "/api/lapor",
     response_model=LaporanResponse
 )
-
 async def proses_laporan(
     payload: LaporanRequest,
     db: Session = Depends(get_db)
@@ -189,6 +222,123 @@ async def proses_laporan(
             status_code=500,
             detail=str(e)
         )
+
+@app.get(
+    "/api/laporan",
+    response_model=list[DashboardLaporan]
+)
+def api_get_laporan(
+    db: Session = Depends(get_db)
+):
+
+    laporan = get_all_laporan(db)
+    hasil = []
+
+    for item in laporan:
+        hasil.append(
+            DashboardLaporan(
+                id=item.id,
+                waktu=str(item.waktu),
+                pesan=item.pesan,
+                latitude=item.latitude,
+                longitude=item.longitude,
+                intent=item.intent,
+                disaster_type=item.disaster_type,
+                confidence=item.confidence,
+                validation_score=item.validation_score,
+                action=item.action,
+                kategori_laporan=item.kategori_laporan,
+                eskalasi_posko=item.eskalasi_posko,
+                final_response=item.final_response,
+                status=item.status
+            )
+        )
+
+    return hasil
+
+
+@app.get(
+    "/api/laporan/{laporan_id}",
+    response_model=DashboardLaporan
+)
+def api_get_laporan_by_id(
+    laporan_id: int,
+    db: Session = Depends(get_db)
+):
+
+    laporan = get_laporan_by_id(
+        db,
+        laporan_id
+    )
+
+    if laporan is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Laporan tidak ditemukan."
+        )
+
+    return DashboardLaporan(
+        id=laporan.id,
+        waktu=str(laporan.waktu),
+        pesan=laporan.pesan,
+        latitude=laporan.latitude,
+        longitude=laporan.longitude,
+        intent=laporan.intent,
+        disaster_type=laporan.disaster_type,
+        confidence=laporan.confidence,
+        validation_score=laporan.validation_score,
+        action=laporan.action,
+        kategori_laporan=laporan.kategori_laporan,
+        eskalasi_posko=laporan.eskalasi_posko,
+        final_response=laporan.final_response,
+        status=laporan.status
+    )
+
+@app.put("/api/laporan/{laporan_id}/status")
+def api_update_status(
+    laporan_id: int,
+    payload: UpdateStatusRequest,
+    db: Session = Depends(get_db)
+):
+
+    laporan = update_status(
+        db,
+        laporan_id,
+        payload.status
+    )
+
+    if laporan is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Laporan tidak ditemukan."
+        )
+
+    return {
+        "message": "Status berhasil diperbarui.",
+        "status": laporan.status
+    }
+
+@app.get("/api/map")
+async def get_map_data(
+    db: Session = Depends(get_db)
+):
+
+    laporan = get_all_laporan(db)
+    hasil = []
+
+    for item in laporan:
+        hasil.append(
+            {
+                "id": item.id,
+                "latitude": item.latitude,
+                "longitude": item.longitude,
+                "pesan": item.pesan,
+                "kategori": item.kategori_laporan,
+                "status": item.status
+            }
+        )
+
+    return hasil
 
 # run
 if __name__ == "__main__":
