@@ -4,6 +4,8 @@ const map = L.map("map").setView(
     11
 );
 
+let markers = [];
+
 // tile
 L.tileLayer(
     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -81,7 +83,7 @@ async function loadMarkers(){
             icon = yellowIcon;
         }
 
-        L.marker(
+        const marker = L.marker(
             [
                 item.latitude,
                 item.longitude
@@ -93,30 +95,137 @@ async function loadMarkers(){
         .addTo(map)
         .bindPopup(
             `
-            <b>${item.pesan}</b>
+            <div style="min-width:240px">
+
+            <h6>
+            📍 Laporan #${item.id}
+            </h6>
             
-            <br><br>
+            <hr>
 
-            <b>Status :</b>
-            ${item.status}
+            <p style="margin-bottom:8px;">
+            💬 ${item.pesan}
+            </p>
             
-            <br>
+            <table class="table table-sm mb-2">
+            
+            <tr>
+            <td><b>Status</b></td>
+            <td>${item.status}</td>
+            </tr>
 
-            <b>Kategori :</b>
-            ${item.kategori}
+            <tr>
+            <td><b>Kategori</b></td>
+            <td>${item.kategori}</td>
+            </tr>
 
-            <br><br>
+            <tr>
+            <td><b>Waktu</b></td>
+            <td>${item.waktu}</td>
+            </tr>
 
-            <a href="http://127.0.0.1:5000/laporan/${item.id}">
+            <tr>
+            <td><b>Latitude</b></td>
+            <td>${item.latitude}</td>
+            </tr>
+
+            <tr>
+            <td><b>Longitude</b></td>
+            <td>${item.longitude}</td>
+            </tr>
+
+            </table>
+
+            <div class="d-grid">
+
+            <a
+            class="btn btn-primary btn-sm"
+            href="http://127.0.0.1:5000/laporan/${item.id}">
+
             Lihat Detail
+
             </a>
+
+            </div>
+
+            </div>
             `
         );
+        markers.push({
+        marker: marker,
+        data: item
+        });
     });
 
 }
 
 loadMarkers();
+
+// filter
+function filterMarkers(){
+
+    const keyword =
+    document
+    .getElementById("searchInput")
+    .value
+    .toLowerCase();
+
+    const status =
+    document
+    .getElementById("statusFilter")
+    .value
+    .toLowerCase();
+
+    const kategori =
+    document
+    .getElementById("kategoriFilter")
+    .value
+    .toLowerCase();
+
+    markers.forEach(item=>{
+        const data = item.data;
+
+        let tampil = true;
+
+        if(
+            keyword &&
+            !(
+                data.id.toString().includes(keyword) ||
+                data.pesan.toLowerCase().includes(keyword) ||
+                data.status.toLowerCase().includes(keyword) ||
+                data.kategori.toLowerCase().includes(keyword)
+            )
+        ){
+            tampil = false;
+        }
+
+        if(
+            status &&
+            data.status.toLowerCase() !== status
+        ){
+            tampil = false;
+        }
+
+        if(
+            kategori &&
+            data.kategori.toLowerCase() !== kategori
+        ){
+            tampil = false;
+        }
+
+        if(tampil){
+            if(!map.hasLayer(item.marker)){
+                item.marker.addTo(map);
+            }
+
+        }else{
+            if(map.hasLayer(item.marker)){
+                map.removeLayer(item.marker);
+            }    
+        }
+    });
+
+}
 
 // legend
 const legend = L.control({

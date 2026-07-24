@@ -111,8 +111,44 @@
         </div>
     </div>
 
-    <!-- Tabel -->
+    <!-- search bar-->
+    <div class="card shadow mb-3">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <input 
+                        type="text"
+                        id="searchInput"
+                        class="form-control"
+                        placeholder="🔍 Cari ID, pesan, status atau kategori...">
+                </div>
+                <div class="col-md-3">
+                    <select 
+                        id="statusFilter" 
+                        class="form-select">
 
+                        <option value="">Semua Status</option>
+                        <option value="Menunggu">Menunggu</option>
+                        <option value="Diproses">Diproses</option>
+                        <option value="Selesai">Selesai</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <select 
+                        id="kategoriFilter" 
+                        class="form-select">
+
+                        <option value="">Semua Kategori</option>
+                        <option value="insiden terverifikasi">Insiden Terverifikasi</option>
+                        <option value="perlu tinjauan">Perlu Tinjauan</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabel -->
     <div class="card shadow">
 
         <div class="card-header">
@@ -142,11 +178,17 @@
 
                     </thead>
 
-                    <tbody>
+                    <tbody id="laporanTable">
 
                     {% for item in laporan %}
 
-                        <tr>
+                        <tr 
+                            class="laporan-row"
+                            data-id="{{ item.id }}"
+                            data-pesan="{{ item.pesan|lower }}"
+                            data-status="{{ item.status|lower }}"
+                            data-kategori="{{ item.kategori_laporan|lower }}"
+                            >
 
                             <td>{{ item.id }}</td>
 

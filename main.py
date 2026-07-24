@@ -330,6 +330,7 @@ async def get_map_data(
         hasil.append(
             {
                 "id": item.id,
+                "waktu": item.waktu.strftime("%d-%m-%Y %H:%M"),
                 "latitude": item.latitude,
                 "longitude": item.longitude,
                 "pesan": item.pesan,
