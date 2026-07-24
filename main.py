@@ -1,3 +1,6 @@
+import os
+import uuid
+import shutil
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -8,12 +11,20 @@ from fastapi import Depends
 from database.database import get_db
 from database.crud import simpan_laporan, get_all_laporan, get_laporan_by_id, update_status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi import UploadFile, File
 
 # FastAPI  
 app = FastAPI(
     title="Tanggap Multi-Agent API",
     description="Backend API Sistem Koordinasi Bencana Banjir berbasis Multi-Agent",
     version="2.0"
+)
+
+app.mount(
+    "/uploads",
+    StaticFiles(directory="uploads"),
+    name="uploads"
 )
 
 app.add_middleware(
@@ -45,6 +56,11 @@ class LaporanRequest(BaseModel):
         description="Longitude GPS."
     )
 
+    image_path: Optional[str] = Field(
+        default=None,
+        description="Path gambar."
+    )
+
 # response model
 class LaporanResponse(BaseModel):
 
@@ -64,6 +80,9 @@ class DashboardLaporan(BaseModel):
     pesan: str
     latitude: float
     longitude: float
+    image_path: Optional[str] = None
+    vision_score: Optional[float] = None
+    vision_result: Optional[str] = None
     intent: str
     disaster_type: str
     confidence: float
@@ -95,6 +114,7 @@ async def proses_laporan(
     print(f"Pesan      : {payload.user_message}")
     print(f"Latitude   : {payload.lat}")
     print(f"Longitude  : {payload.lon}")
+    print(f"Image           : {payload.image_path}")
 
     try:
 
@@ -116,7 +136,7 @@ async def proses_laporan(
         print(f"Action          : {hasil.get('action')}")
         print(f"Kategori        : {hasil.get('kategori_laporan')}")
         print(f"Eskalasi        : {hasil.get('eskalasi_posko')}")
-
+        
         print("=================================\n")
 
         # simpan to database
@@ -128,7 +148,8 @@ async def proses_laporan(
                 "pesan": payload.user_message,
                 "latitude": payload.lat,
                 "longitude": payload.lon,
-
+                "image_path": payload.image_path,
+            
                 "intent": hasil.get(
                     "intent",
                     "lainnya"
@@ -242,6 +263,9 @@ def api_get_laporan(
                 pesan=item.pesan,
                 latitude=item.latitude,
                 longitude=item.longitude,
+                image_path=item.image_path,
+                vision_score=item.vision_score,
+                vision_result=item.vision_result,
                 intent=item.intent,
                 disaster_type=item.disaster_type,
                 confidence=item.confidence,
@@ -283,6 +307,7 @@ def api_get_laporan_by_id(
         pesan=laporan.pesan,
         latitude=laporan.latitude,
         longitude=laporan.longitude,
+        image_path=laporan.image_path,
         intent=laporan.intent,
         disaster_type=laporan.disaster_type,
         confidence=laporan.confidence,
@@ -340,6 +365,35 @@ async def get_map_data(
         )
 
     return hasil
+
+@app.post("/upload-image")
+async def upload_image(
+    image: UploadFile = File(...)
+):
+
+    ext = image.filename.split(".")[-1]
+
+    filename = f"{uuid.uuid4()}.{ext}"
+
+    filepath = os.path.join(
+        "uploads",
+        filename
+    )
+
+    with open(
+        filepath,
+        "wb"
+    ) as buffer:
+
+        shutil.copyfileobj(
+            image.file,
+            buffer
+        )
+
+    return {
+        "filename": filename,
+        "path": filepath
+    }
 
 # run
 if __name__ == "__main__":

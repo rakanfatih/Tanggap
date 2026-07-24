@@ -67,6 +67,22 @@ class Laporan(Base):
         String
     )
 
+    # vision
+    image_path = Column(
+        String,
+        nullable=True
+    )
+
+    vision_score = Column(
+        Float,
+        nullable=True
+    )
+
+    vision_result = Column(
+        String,
+        nullable=True
+    )
+
     status = Column(
         String,
         default="Menunggu"

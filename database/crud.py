@@ -11,6 +11,7 @@ def simpan_laporan(
         pesan=data["pesan"],
         latitude=data["latitude"],
         longitude=data["longitude"],
+        image_path=data.get("image_path"),
         intent=data["intent"],
         disaster_type=data["disaster_type"],
         confidence=data["confidence"],
@@ -18,7 +19,9 @@ def simpan_laporan(
         action=data["action"],
         kategori_laporan=data["kategori_laporan"],
         eskalasi_posko=data["eskalasi_posko"],
-        final_response=data["final_response"]
+        final_response=data["final_response"],
+        vision_score=data.get("vision_score"),
+        vision_result=data.get("vision_result")
     )
 
     db.add(laporan)
