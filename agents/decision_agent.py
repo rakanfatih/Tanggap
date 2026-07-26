@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
 
-#
 class DecisionOutput(BaseModel):
 
     action: str = Field(
@@ -8,7 +7,7 @@ class DecisionOutput(BaseModel):
     )
 
     eskalasi_posko: bool = Field(
-        description="true jika laporan harus diteruskan ke dashboard posko."
+        description="true jika laporan diteruskan ke dashboard BPBD"
     )
 
     kategori_laporan: str = Field(
@@ -16,111 +15,133 @@ class DecisionOutput(BaseModel):
     )
 
     reason: str = Field(
-        description="alasan keputusan."
+        description="alasan keputusan"
     )
 
-#decision agent
 def make_decision(
     intent: str,
     disaster_type: str,
-    validation_score: int | None = None
+    validation_score: int | None = None,
+    flood_detected: bool | None = None,
+    vision_confidence: float | None = None,
+    possible_fake: bool | None = None,
+    severity: str | None = None
 ):
 
     print("\n==============================")
     print("[DECISION AGENT]")
     print("==============================")
 
-    print(f"Intent            : {intent}")
-    print(f"Disaster Type     : {disaster_type}")
-    print(f"Validation Score  : {validation_score}")
+    print(f"Intent               : {intent}")
+    print(f"Disaster             : {disaster_type}")
+    print(f"Validation Score     : {validation_score}")
+    print(f"Flood Detected       : {flood_detected}")
+    print(f"Vision Confidence    : {vision_confidence}")
+    print(f"Possible Fake        : {possible_fake}")
+    print(f"Severity             : {severity}")
 
-    # jika lainnya
+    if validation_score is None:
+        validation_score = 0
+
+    if vision_confidence is None:
+        vision_confidence = 0
+
+    # bukan laporan
     if intent == "lainnya":
-        hasil = DecisionOutput(
+
+        return DecisionOutput(
             action="reject",
             eskalasi_posko=False,
             kategori_laporan="bukan laporan",
-            reason="pesan berada di luar ruang lingkup sistem."
+            reason="Pesan berada di luar ruang lingkup sistem."
         )
-        print(hasil)
-        return hasil
 
-    # jika tanya info
+    # tanya informasi
     if intent == "tanya_info":
-        hasil = DecisionOutput(
+
+        return DecisionOutput(
             action="respond",
             eskalasi_posko=False,
             kategori_laporan="bukan laporan",
-            reason="pesan berupa permintaan informasi."
+            reason="Pesan berupa permintaan informasi."
         )
-        print(hasil)
-        return hasil
 
-    # jika lapor darurat
-    if intent == "lapor_darurat":
+    # hanya banjir
+    if disaster_type != "banjir":
 
-        if disaster_type != "banjir":
-            hasil = DecisionOutput(
-                action="reject",
-                eskalasi_posko=False,
-                kategori_laporan="bukan laporan",
-                reason="jenis bencana berada di luar ruang lingkup sistem."
-            )
-            print(hasil)
-            return hasil
+        return DecisionOutput(
+            action="reject",
+            eskalasi_posko=False,
+            kategori_laporan="bukan laporan",
+            reason="Sistem hanya menangani laporan banjir."
+        )
 
-        if validation_score is None:
-            validation_score = 0
-        
-        # terverifikasi
-        if validation_score >= 80:
-            hasil = DecisionOutput(
-                action="escalate",
-                eskalasi_posko=True,
-                kategori_laporan="insiden terverifikasi",
-                reason="laporan banjir memiliki skor validasi tinggi."
-            )
-            print(hasil)
-            return hasil
+    # foto terindikasi palsu
+    if possible_fake:
 
-        # perlu tinjauan
-        hasil = DecisionOutput(
+        return DecisionOutput(
+            action="reject",
+            eskalasi_posko=False,
+            kategori_laporan="perlu tinjauan",
+            reason="Foto terindikasi tidak sesuai dengan kondisi banjir."
+        )
+
+    # vision tidak menemukan banjir
+    if flood_detected is False:
+
+        return DecisionOutput(
             action="respond",
             eskalasi_posko=False,
             kategori_laporan="perlu tinjauan",
-            reason="hasil validasi belum cukup untuk memverifikasi laporan sehingga memerlukan tinjauan operator."
+            reason="Objek banjir tidak terdeteksi pada gambar."
         )
-        print(hasil)
-        return hasil
 
-    #fallback 
-    hasil = DecisionOutput(
-        action="reject",
+    # kondisi sangat meyakinkan
+    if (
+        validation_score >= 60
+        and vision_confidence >= 80
+        and severity == "Tinggi"
+    ):
+
+        return DecisionOutput(
+            action="escalate",
+            eskalasi_posko=True,
+            kategori_laporan="insiden terverifikasi",
+            reason="Validator dan Vision Agent sama-sama menunjukkan banjir dengan tingkat keyakinan tinggi."
+        )
+
+    # cukup yakin
+    if (
+        validation_score >= 40
+        and vision_confidence >= 60
+    ):
+
+        return DecisionOutput(
+            action="respond",
+            eskalasi_posko=False,
+            kategori_laporan="perlu tinjauan",
+            reason="Laporan cukup meyakinkan namun masih memerlukan verifikasi operator."
+        )
+
+    # skor rendah
+    return DecisionOutput(
+        action="respond",
         eskalasi_posko=False,
-        kategori_laporan="bukan laporan",
-        reason="keputusan tidak dapat ditentukan."
+        kategori_laporan="perlu tinjauan",
+        reason="Data validasi belum cukup untuk melakukan eskalasi otomatis."
     )
-    print(hasil)
-    return hasil
 
-# test
+
 if __name__ == "__main__":
 
-    tests = [
-        ("lapor_darurat", "banjir", 100),
-        ("lapor_darurat", "banjir", 60),
-        ("tanya_info", "banjir", None),
-        ("lainnya", "gempa", None)
-    ]
+    hasil = make_decision(
+        intent="lapor_darurat",
+        disaster_type="banjir",
+        validation_score=80,
+        flood_detected=True,
+        vision_confidence=95,
+        possible_fake=False,
+        severity="Tinggi"
+    )
 
-    for t in tests:
-
-        print("\n====================================")
-
-        hasil = make_decision(
-            intent=t[0],
-            disaster_type=t[1],
-            validation_score=t[2]
-        )
-
-        print(hasil.model_dump())
+    print(hasil.model_dump())
