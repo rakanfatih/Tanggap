@@ -5,6 +5,8 @@ from agents.validator_agent import validasi_laporan
 from agents.retriever_agent import retrieve_sop_info
 from agents.decision_agent import make_decision
 from agents.executor_agent import execute_response
+from agents.vision_agent import vision_agent
+
 
 # graph state
 class GraphState(TypedDict):
@@ -13,6 +15,7 @@ class GraphState(TypedDict):
     user_message: str
     lat: Optional[float]
     lon: Optional[float]
+    image_path: Optional[str]
 
     # router
     intent: Optional[str]
@@ -27,6 +30,11 @@ class GraphState(TypedDict):
     kondisi_cuaca: Optional[str]
     suhu: Optional[float]
     is_hujan: Optional[bool]
+
+    # vision
+    image_validation: Optional[bool]
+    image_confidence: Optional[float]
+    image_description: Optional[str]
 
     # retriever
     context: Optional[str]
@@ -75,6 +83,21 @@ def node_validator(state: GraphState):
         "kondisi_cuaca": hasil["kondisi_cuaca"],
         "suhu": hasil["suhu"],
         "is_hujan": hasil["is_hujan"]
+    }
+
+# vision node
+def node_vision(state: GraphState):
+
+    print("\n[NODE] Vision")
+
+    hasil = analyze_image(
+        image_path=state.get("image_path")
+    )
+
+    return {
+        "image_validation": hasil["image_validation"],
+        "image_confidence": hasil["image_confidence"],
+        "image_description": hasil["image_description"]
     }
 
 # retriever node
@@ -153,6 +176,11 @@ workflow.add_node(
 )
 
 workflow.add_node(
+    "vision",
+    node_vision
+)
+
+workflow.add_node(
     "retriever",
     node_retriever
 )
@@ -183,7 +211,7 @@ workflow.add_conditional_edges(
 
 workflow.add_edge(
     "validator",
-    "decision"
+    "vision"
 )
 
 workflow.add_edge(
@@ -211,6 +239,7 @@ if __name__ == "__main__":
             "user_message": "Rumah saya kebanjiran.",
             "lat": -6.200000,
             "lon": 106.816666
+            "image_path": "uploads/contoh.jpg"
         }
     )
 

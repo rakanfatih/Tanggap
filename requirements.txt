@@ -21,3 +21,12 @@ python-dotenv
 
 # database
 sqlalchemy
+
+# vision Agent
+ultralytics
+opencv-python
+transformers
+torch
+torchvision
+pillow
+numpy
