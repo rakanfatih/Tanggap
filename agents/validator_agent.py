@@ -4,6 +4,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+HEADERS = {
+    "User-Agent": "Tanggap-BPBD/1.0 (rakanfatih01@gmail.com)"
+}
+
 # cek cuaca
 def cek_cuaca_aktual(lat: float, lon: float):
 
@@ -75,35 +79,34 @@ def cek_cuaca_aktual(lat: float, lon: float):
 # cek lokasi
 def cek_lokasi_aktual(lat: float, lon: float):
 
-    api_key = os.getenv("GOOGLE_MAPS_API_KEY")
-
-    if not api_key or api_key == "masukkan api key google maps di sini":
-
-        return {
-            "address": "simulasi lokasi: Jl. Margonda Raya, Kota Depok",
-            "gps_valid": True
-        }
-
     url = (
-        "https://maps.googleapis.com/maps/api/geocode/json"
-        f"?latlng={lat},{lon}"
-        f"&key={api_key}"
+        "https://nominatim.openstreetmap.org/reverse"
+        f"?lat={lat}"
+        f"&lon={lon}"
+        "&format=json"
+        "&accept-language=id"
     )
 
     try:
+        response = requests.get(
+            url,
+            headers=HEADERS,
+            timeout=10
+        )
 
-        response = requests.get(url, timeout=5)
-
-        data = response.json()
-        
-        if data["status"] != "OK":
+        if response.status_code != 200:
 
             return {
                 "address": "lokasi tidak ditemukan",
                 "gps_valid": False
             }
 
-        alamat = data["results"][0]["formatted_address"]
+        data = response.json()
+
+        alamat = data.get(
+            "display_name",
+            "lokasi tidak ditemukan"
+        )
 
         return {
             "address": alamat,
@@ -112,12 +115,26 @@ def cek_lokasi_aktual(lat: float, lon: float):
 
     except Exception as e:
 
-        print(f"[VALIDATOR] Error lokasi: {e}")
+        print(e)
 
         return {
             "address": "lokasi tidak diketahui",
             "gps_valid": False
         }
+
+def koordinat_valid(lat, lon):
+
+    if lat is None or lon is None:
+        return False
+
+    if lat < -90 or lat > 90:
+        return False
+
+    if lon < -180 or lon > 180:
+        return False
+
+    return True
+
 
 # hitung skor
 def hitung_validation_score(
@@ -132,13 +149,14 @@ def hitung_validation_score(
         score += 40
 
     if is_raining:
-        score += 40
+        score += 30
 
-    if address.lower() not in [
+    if address not in [
         "lokasi tidak ditemukan",
-        "lokasi tidak diketahui"
+        "lokasi tidak diketahui",
+        "koordinat tidak valid"
     ]:
-        score += 20
+        score += 30
 
     return score
 
@@ -155,9 +173,17 @@ def validasi_laporan(
 
     print(f"Koordinat : [{lat}, {lon}]")
 
+    gps_valid = koordinat_valid(lat, lon)
+
     hasil_cuaca = cek_cuaca_aktual(lat, lon)
 
-    hasil_lokasi = cek_lokasi_aktual(lat, lon)
+    if gps_valid:
+        hasil_lokasi = cek_lokasi_aktual(lat, lon)
+    else:
+        hasil_lokasi = {
+            "address": "koordinat tidak valid",
+            "gps_valid": False
+        }
 
     validation_score = hitung_validation_score(
         gps_valid=hasil_lokasi["gps_valid"],
