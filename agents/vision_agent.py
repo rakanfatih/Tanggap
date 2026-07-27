@@ -1,3 +1,5 @@
+import cv2
+import numpy as np
 from vision.image_validator import validate_image
 from vision.yolo_detector import detect_objects
 from vision.flood_analyzer import analyze_flood
@@ -7,6 +9,8 @@ from vision.water_analyzer import analyze_water
 from vision.vehicle_immersion import analyze_vehicle_immersion
 from vision.water_level_estimator import estimate_water_level
 
+WATER_HSV_LOWER = np.array([0, 0, 40])
+WATER_HSV_UPPER = np.array([180, 90, 220])
 
 def analyze_image(image_path: str):
 
@@ -14,28 +18,60 @@ def analyze_image(image_path: str):
     print("[VISION AGENT]")
     print("==============================")
 
-    validate_image(image_path)
+    val_result = validate_image(image_path)
+    image = val_result["image"] 
 
-    detections = detect_objects(image_path)
-    water_result = analyze_water(image_path)
-
-    immersion_result = analyze_vehicle_immersion(
-        image_path,
-        detections
-    )
-
-    water_level_result = estimate_water_level(
-    image_path,
-    detections
-    )
-
-    flood = analyze_flood(
-        detections,
-        water_result,
-        immersion_result,
-        water_level_result
+    hsv = cv2.cvtColor(
+        image, 
+        cv2.COLOR_BGR2HSV
         )
     
+    water_mask = cv2.inRange(
+        hsv, 
+        WATER_HSV_LOWER, 
+        WATER_HSV_UPPER
+        )
+
+    kernel = np.ones(
+        (5, 5), 
+        np.uint8
+        )
+    
+    water_mask = cv2.morphologyEx(
+        water_mask, 
+        cv2.MORPH_OPEN, 
+        kernel
+        )
+    
+    water_mask = cv2.morphologyEx(
+        water_mask, 
+        cv2.MORPH_CLOSE, 
+        kernel
+        )
+
+    detections = detect_objects(image)
+
+    water_result = analyze_water(
+        water_mask, 
+        image.shape
+        )
+    
+    immersion_result = analyze_vehicle_immersion(
+        water_mask, 
+        detections
+        )
+    
+    water_level_result = estimate_water_level(
+        water_mask, 
+        detections
+        )
+
+    flood = analyze_flood(
+        detections, 
+        water_result, 
+        immersion_result, 
+        water_level_result
+        )
     fake = detect_fake(detections)
 
     hasil = VisionOutput(

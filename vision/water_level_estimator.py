@@ -1,6 +1,4 @@
 import cv2
-import numpy as np
-
 
 REFERENCE_OBJECTS = {
     "person": 170,
@@ -10,20 +8,13 @@ REFERENCE_OBJECTS = {
     "motorcycle": 110
 }
 
-def estimate_water_level(image_path, detections):
-
-    image = cv2.imread(image_path)
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower = np.array([0, 0, 40])
-    upper = np.array([180, 90, 220])
-    mask = cv2.inRange(hsv, lower, upper)
+def estimate_water_level(water_mask, detections):
 
     estimates = []
 
     for obj in detections:
 
         label = obj["label"]
-
         if label not in REFERENCE_OBJECTS:
             continue
 
@@ -33,11 +24,10 @@ def estimate_water_level(image_path, detections):
         if object_height <= 0:
             continue
 
-        roi = mask[y1:y2, x1:x2]
+        roi = water_mask[y1:y2, x1:x2]
         rows = roi.shape[0]
         submerged = 0
 
-        # hitung dari bawah ke atas
         for i in range(rows - 1, -1, -1):
             row = roi[i]
             white = cv2.countNonZero(row)
@@ -50,6 +40,7 @@ def estimate_water_level(image_path, detections):
         ratio = submerged / object_height
         real_height = REFERENCE_OBJECTS[label]
         estimated_cm = ratio * real_height
+        
         estimates.append({
             "object": label,
             "ratio": round(ratio, 2),
@@ -67,13 +58,10 @@ def estimate_water_level(image_path, detections):
 
     if max_height >= 100:
         level = ">100 cm"
-
     elif max_height >= 30:
         level = "30-100 cm"
-
     elif max_height > 0:
         level = "<30 cm"
-
     else:
         level = "Tidak diketahui"
 

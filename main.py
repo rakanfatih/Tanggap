@@ -121,7 +121,8 @@ async def proses_laporan(
         input_state = {
             "user_message": payload.user_message,
             "lat": payload.lat,
-            "lon": payload.lon
+            "lon": payload.lon,
+            "image_path": payload.image_path
         }
 
         hasil = langgraph_app.invoke(
@@ -189,6 +190,9 @@ async def proses_laporan(
                     "final_response",
                     "Terjadi kesalahan."
                 )
+
+                "vision_score": hasil.get("vision_confidence"), 
+                "vision_result": hasil.get("vision_reason")
 
             }
         )

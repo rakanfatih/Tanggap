@@ -243,6 +243,11 @@ workflow.add_edge(
 )
 
 workflow.add_edge(
+    "retriever",
+    "decision"
+)
+
+workflow.add_edge(
     "decision",
     "executor"
 )
