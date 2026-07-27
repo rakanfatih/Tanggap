@@ -58,7 +58,7 @@ const greyIcon = new L.Icon({
 async function loadMarkers(){
 
     const response = await fetch(
-        "http://127.0.0.1:8000/api/map"
+        API_BASE_URL + "/api/map"
     );
 
     const data = await response.json();

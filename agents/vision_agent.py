@@ -72,6 +72,7 @@ def analyze_image(image_path: str):
         immersion_result, 
         water_level_result
         )
+    
     fake = detect_fake(detections)
 
     hasil = VisionOutput(
@@ -87,5 +88,17 @@ def analyze_image(image_path: str):
         possible_fake=fake["possible_fake"],
         reason=fake["reason"]
     )
+
+
+    print("\n===== HASIL VISION =====")
+    print(f"Flood Detected   : {hasil.flood_detected}")
+    print(f"Confidence       : {hasil.confidence}")
+    print(f"Severity         : {hasil.severity}")
+    print(f"Estimated Water  : {hasil.estimated_water_cm} cm ({hasil.estimated_water_level})")
+    print(f"Water Area       : {hasil.water_percentage} %")
+    print(f"Objects Found    : {hasil.object_count} {hasil.visible_objects}")
+    print(f"Possible Fake    : {hasil.possible_fake}")
+    print(f"Reason           : {hasil.reason}")
+    print("=========================")
 
     return hasil

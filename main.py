@@ -2,6 +2,7 @@ import os
 import uuid
 import shutil
 import uvicorn
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -13,6 +14,9 @@ from database.crud import simpan_laporan, get_all_laporan, get_laporan_by_id, up
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi import UploadFile, File
+import json
+
+load_dotenv()
 
 # FastAPI  
 app = FastAPI(
@@ -27,10 +31,15 @@ app.mount(
     name="uploads"
 )
 
+DASHBOARD_URL = os.getenv(
+    "DASHBOARD_URL", 
+    "http://127.0.0.1:5000"
+    )
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://127.0.0.1:5000",
+        DASHBOARD_URL,
         "http://localhost:5000",
     ],
     allow_credentials=True,
@@ -140,6 +149,16 @@ async def proses_laporan(
         
         print("=================================\n")
 
+        objek_terdeteksi = hasil.get("visible_objects", [])
+        vision_detail = {
+            "severity": hasil.get("severity", "-"),
+            "water_cm": hasil.get("estimated_water_cm", 0),
+            "water_percentage": hasil.get("water_percentage", 0),
+            "objects": ", ".join(objek_terdeteksi) if objek_terdeteksi else "Tidak ada",
+            "reason": hasil.get("vision_reason", "")
+        }
+
+
         # simpan to database
         print("\n[MENYIMPAN KE DATABASE]")
 
@@ -150,54 +169,45 @@ async def proses_laporan(
                 "latitude": payload.lat,
                 "longitude": payload.lon,
                 "image_path": payload.image_path,
-            
                 "intent": hasil.get(
                     "intent",
                     "lainnya"
                 ),
-
                 "disaster_type": hasil.get(
                     "disaster_type",
                     "lainnya"
                 ),
-
                 "confidence": hasil.get(
                     "confidence",
                     0.0
                 ),
-
                 "validation_score": hasil.get(
                     "validation_score",
                     0
                 ),
-
                 "action": hasil.get(
                     "action",
                     "reject"
                 ),
-
                 "kategori_laporan": hasil.get(
                     "kategori_laporan",
                     "bukan laporan"
                 ),
-
                 "eskalasi_posko": hasil.get(
                     "eskalasi_posko",
                     False
                 ),
-
                 "final_response": hasil.get(
                     "final_response",
                     "Terjadi kesalahan."
-                )
+                ), 
 
                 "vision_score": hasil.get("vision_confidence"), 
-                "vision_result": hasil.get("vision_reason")
-
+                "vision_result": json.dumps(vision_detail)
             }
         )
-        print("[DATABASE] Berhasil disimpan")
 
+        print("[DATABASE] Berhasil disimpan")
         return LaporanResponse(
 
             intent=hasil.get(

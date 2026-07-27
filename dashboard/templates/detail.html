@@ -154,7 +154,7 @@
                     {% if laporan.image_path %}
 
                         <img
-                            src="http://127.0.0.1:8000/{{ laporan.image_path }}"
+                            src="{{ api_base }}/{{ laporan.image_path }}"
                             class="img-fluid rounded shadow"
                             style="max-height:500px;">
 

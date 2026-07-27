@@ -1,3 +1,5 @@
+import os
+import  json
 import requests
 from flask import(
     Flask,
@@ -7,10 +9,14 @@ from flask import(
     url_for,
     abort
 )
+from dotenv import load_dotenv
+
+load_dotenv()
     
 app = Flask(__name__)
 
-API_URL = "http://127.0.0.1:8000/api"
+API_BASE = os.getenv("FASTAPI_URL", "http://127.0.0.1:8000")
+API_URL = f"{API_BASE}/api"
 
 @app.route("/")
 def index():
@@ -45,7 +51,8 @@ def index():
         total=total,
         terverifikasi=terverifikasi,
         review=review,
-        bukan=bukan
+        bukan=bukan,
+        api_base=API_BASE
     )
 
 @app.route("/laporan/<int:laporan_id>")
@@ -60,9 +67,19 @@ def detail(laporan_id):
 
     laporan = response.json()
 
+    if laporan.get("vision_result"):
+            try:
+                laporan["vision_detail"] = json.loads(laporan["vision_result"])
+            except Exception:
+                # Fallback jika kebetulan membuka data lama yang belum berformat JSON
+                laporan["vision_detail"] = {"reason": laporan["vision_result"]}
+    else:
+        laporan["vision_detail"] = None
+
     return render_template(
         "detail.html",
-        laporan=laporan
+        laporan=laporan,
+        api_base=API_BASE
     )
 
 @app.post("/update-status/<int:laporan_id>")

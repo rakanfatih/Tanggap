@@ -1,92 +1,39 @@
 console.log("Dashboard Loaded");
 
-const searchInput =
-document.getElementById("searchInput");
+const searchInput = document.getElementById("searchInput");
+const statusFilter = document.getElementById("statusFilter");
+const kategoriFilter = document.getElementById("kategoriFilter");
 
-const statusFilter =
-document.getElementById("statusFilter");
-
-const kategoriFilter =
-document.getElementById("kategoriFilter");
-
-function filterTable(){
+function filterTable() {
     
-    const keyword =
-    searchInput.value.toLowerCase();
+    const keyword = searchInput.value.toLowerCase();
+    const status = statusFilter.value.toLowerCase();
+    const kategori = kategoriFilter.value.toLowerCase();
 
-    const status =
-    statusFilter.value.toLowerCase();
+    const rows = document.querySelectorAll(".laporan-row");
 
-    const kategori =
-    kategoriFilter.value.toLowerCase();
+    rows.forEach(row => {
+        const id = row.dataset.id;
+        const pesan = row.dataset.pesan;
+        const st = row.dataset.status;
+        const kat = row.dataset.kategori;
 
-    const rows =
-    document.querySelectorAll(".laporan-row");
+        const lolosPencarian = checkSearchMatch(id, pesan, st, kat, keyword);
+        
+        const lolosFilter = checkFilterMatch(st, kat, status, kategori);
 
-    rows.forEach(row=>{
-        const id=
-        row.dataset.id;
-
-        const pesan = 
-        row.dataset.pesan;
-
-        const st =
-        row.dataset.status;
-
-        const kat = 
-        row.dataset.kategori;
-
-        let tampil = true;
-
-        // search
-        if(
-            keyword &&
-            !(
-                id.includes(keyword) ||
-                pesan.includes(keyword) ||
-                st.includes(keyword) ||
-                kat.includes(keyword)
-            )
-        ){
-            tampil = false;
+        if (lolosPencarian && lolosFilter) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
         }
+    });
 
-        // filter status
-        if(
-            status &&
-            st !== status
-        ){
-            tampil = false;
-        }
-
-        // filter kategori
-        if(
-            kategori &&
-            kat !== kategori
-        ){
-            tampil = false;
-        }
-
-        row.style.display = 
-            tampil ? "" : "none";
-    })
-
-    if(typeof filterMarkers === "function"){
-    filterMarkers();
+    if (typeof filterMarkers === "function") {
+        filterMarkers();
     }
 }
 
-searchInput.addEventListener(
-    "keyup",
-    filterTable
-);
-
-statusFilter.addEventListener(
-    "change",
-    filterTable
-);
-
-kategoriFilter.addEventListener(
-    "change",
-    filterTable
-);
+searchInput.addEventListener("keyup", filterTable);
+statusFilter.addEventListener("change", filterTable);
+kategoriFilter.addEventListener("change", filterTable);
