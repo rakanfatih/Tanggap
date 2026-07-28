@@ -71,7 +71,6 @@ def detail(laporan_id):
             try:
                 laporan["vision_detail"] = json.loads(laporan["vision_result"])
             except Exception:
-                # Fallback jika kebetulan membuka data lama yang belum berformat JSON
                 laporan["vision_detail"] = {"reason": laporan["vision_result"]}
     else:
         laporan["vision_detail"] = None

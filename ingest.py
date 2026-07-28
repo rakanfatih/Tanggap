@@ -1,5 +1,6 @@
 import os
 import glob
+import re
 from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFDirectoryLoader, CSVLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -11,6 +12,20 @@ BASE_DIR = Path(__file__).resolve().parent
 VECTOR_DB_PATH = BASE_DIR / "vector_db"
 
 load_dotenv()
+
+def clean_text(text):
+    # hapus url
+    text = re.sub(r'http\S+|www.\S+', '', text)    
+    # hapus header/footer
+    text = re.sub(r'\b(Halaman|Hal|Page)\s*\d+\b', '', text, flags=re.IGNORECASE)    
+    # hapus karakter non ASCII
+    text = text.encode('ascii', 'ignore').decode('utf-8')
+    # ganti jeda baris jadi spasi
+    text = re.sub(r'\n+', ' ', text)
+    # ganti spasi ganda  jadi tunggal
+    text = re.sub(r'\s+', ' ', text)
+    # hapus spasi kosong awal dan akhir kalimat
+    return text.strip()
 
 def create_vector_db():
     print("1. membaca dokumen ...")
