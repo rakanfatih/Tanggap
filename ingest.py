@@ -46,6 +46,10 @@ def create_vector_db():
 
     print(f"total halaman/baris data yang dimuat: {len(documents)}" )
 
+    print(" membersihkan data teks ...")
+    for doc in documents:
+        doc.page_content = clean_text(doc.page_content)
+
     print("2. chungking ....")
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,

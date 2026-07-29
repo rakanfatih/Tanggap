@@ -1,7 +1,7 @@
 import os
-import  json
+import json
 import requests
-from flask import(
+from flask import (
     Flask,
     render_template,
     redirect,
@@ -20,44 +20,31 @@ API_URL = f"{API_BASE}/api"
 
 @app.route("/")
 def index():
-
     response = requests.get(
         f"{API_URL}/laporan"
     )
 
     laporan = response.json()
+    
     total = len(laporan)
-    terverifikasi = sum(
-        1
-        for item in laporan
-        if item["kategori_laporan"] == "insiden terverifikasi"
-    )
-
-    review = sum(
-        1
-        for item in laporan
-        if item["kategori_laporan"] == "perlu tinjauan"
-    )
-
-    bukan = sum(
-        1
-        for item in laporan
-        if item["kategori_laporan"] == "bukan laporan"
-    )
+    
+    # Disesuaikan dengan mockup Figma
+    menunggu = sum(1 for item in laporan if item["status"] == "Menunggu")
+    diproses = sum(1 for item in laporan if item["status"] == "Diproses")
+    selesai = sum(1 for item in laporan if item["status"] == "Selesai")
 
     return render_template(
         "index.html",
         laporan=laporan,
         total=total,
-        terverifikasi=terverifikasi,
-        review=review,
-        bukan=bukan,
+        menunggu=menunggu,
+        diproses=diproses,
+        selesai=selesai,
         api_base=API_BASE
     )
 
 @app.route("/laporan/<int:laporan_id>")
 def detail(laporan_id):
-
     response = requests.get(
         f"{API_URL}/laporan/{laporan_id}"
     )
@@ -68,10 +55,10 @@ def detail(laporan_id):
     laporan = response.json()
 
     if laporan.get("vision_result"):
-            try:
-                laporan["vision_detail"] = json.loads(laporan["vision_result"])
-            except Exception:
-                laporan["vision_detail"] = {"reason": laporan["vision_result"]}
+        try:
+            laporan["vision_detail"] = json.loads(laporan["vision_result"])
+        except Exception:
+            laporan["vision_detail"] = {"reason": laporan["vision_result"]}
     else:
         laporan["vision_detail"] = None
 
@@ -83,7 +70,6 @@ def detail(laporan_id):
 
 @app.post("/update-status/<int:laporan_id>")
 def update_status_laporan(laporan_id):
-
     status = request.form["status"]
 
     requests.put(

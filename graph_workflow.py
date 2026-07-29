@@ -16,6 +16,7 @@ class GraphState(TypedDict):
     lat: Optional[float]
     lon: Optional[float]
     image_path: Optional[str]
+    chat_history: Optional[str]
 
     # router
     intent: Optional[str]
@@ -64,7 +65,9 @@ def node_router(state: GraphState):
     print("\n[NODE] Router")
 
     hasil = route_message(
-        state["user_message"]
+        state["user_message"],
+        chat_history=state.get("chat_history")
+
     )
 
     return {
@@ -166,7 +169,8 @@ def node_executor(state: GraphState):
         action=state["action"],
         kategori_laporan=state["kategori_laporan"],
         reason=state["decision_reason"],
-        context=state.get("context", "")
+        context=state.get("context", ""),
+        chat_history=state.get("chat_history", "")
     )
 
     return {

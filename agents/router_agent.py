@@ -26,7 +26,10 @@ class RouterOutput(BaseModel):
     )
 
 # router agent
-def route_message(user_message: str):
+def route_message(
+        user_message: str,
+        chat_history: str = ""
+):
 
     print("\n==============================")
     print("[ROUTER AGENT]")
@@ -140,7 +143,7 @@ def route_message(user_message: str):
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
-        ("human", "{user_message}")
+        ("human", "Riwayat sebelumnya:\n{chat_history}\n\nPesan warga saat ini: {user_message}")
     ])
 
     chain = prompt | structured_llm

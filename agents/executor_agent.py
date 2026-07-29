@@ -20,7 +20,8 @@ def execute_response(
     action: str,
     kategori_laporan: str,
     reason: str,
-    context: str = ""
+    context: str = "",
+    chat_history: str = ""
 ):
 
     print("\n==============================")
@@ -129,7 +130,10 @@ def execute_response(
             (
                 "human",
                 """
-                Pesan Warga:
+                Riwayat Percakapan Sebelumnya:
+                {chat_history}
+
+                Pesan Warga (Saat Ini):
                 {user_message}
 
                 Intent:

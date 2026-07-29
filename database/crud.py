@@ -8,6 +8,8 @@ def simpan_laporan(
 ):
 
     laporan = Laporan(
+        session_id=data.get("session_id", "default_session"),
+        processing_time=data.get("processing_time", 0.0),
         pesan=data["pesan"],
         latitude=data["latitude"],
         longitude=data["longitude"],
@@ -29,6 +31,27 @@ def simpan_laporan(
     db.refresh(laporan)
 
     return laporan
+
+def get_chat_history(
+        db: Session, 
+        session_id: str, 
+        limit: int = 5
+):
+    
+    histori = (
+        db.query(Laporan)
+        .filter(Laporan.session_id == session_id)
+        .order_by(Laporan.waktu.asc())
+        .limit(limit)
+        .all()
+    )
+    
+    chat_history = ""
+    for h in histori:
+        chat_history += f"Warga: {h.pesan}\n"
+        chat_history += f"GARDA: {h.final_response}\n\n"
+        
+    return chat_history
 
 def get_all_laporan(
     db: Session

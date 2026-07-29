@@ -2,6 +2,7 @@ import os
 import uuid
 import shutil
 import uvicorn
+import time
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -10,7 +11,7 @@ from graph_workflow import app as langgraph_app
 from sqlalchemy.orm import Session
 from fastapi import Depends
 from database.database import get_db
-from database.crud import simpan_laporan, get_all_laporan, get_laporan_by_id, update_status
+from database.crud import simpan_laporan, get_all_laporan, get_laporan_by_id, update_status, get_chat_history
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi import UploadFile, File
@@ -50,6 +51,11 @@ app.add_middleware(
 # request model 
 class LaporanRequest(BaseModel):
 
+    session_id: str = Field(
+        default="default_session", 
+        description="ID unik untuk setiap user/perangkat"
+    )
+
     user_message: str = Field(
         ...,
         description="Pesan yang dikirim warga."
@@ -80,6 +86,7 @@ class LaporanResponse(BaseModel):
     final_response: str
     eskalasi_posko: bool
     kategori_laporan: str
+    processing_time: float
 
 # dashboard model
 class DashboardLaporan(BaseModel):
@@ -123,23 +130,32 @@ async def proses_laporan(
     print(f"Pesan      : {payload.user_message}")
     print(f"Latitude   : {payload.lat}")
     print(f"Longitude  : {payload.lon}")
-    print(f"Image           : {payload.image_path}")
+    print(f"Image      : {payload.image_path}")
 
     try:
+
+        riwayat = get_chat_history(db, payload.session_id)
 
         input_state = {
             "user_message": payload.user_message,
             "lat": payload.lat,
             "lon": payload.lon,
-            "image_path": payload.image_path
+            "image_path": payload.image_path,
+            "chat_history": riwayat
         }
+
+        start_time = time.time()
 
         hasil = langgraph_app.invoke(
             input_state
         )
 
+        end_time = time.time()
+        latensi = round(end_time - start_time, 2)
+
         print("\n========== HASIL GRAPH ==========")
 
+        print(f"Latensi         : {latensi} detik")
         print(f"Intent          : {hasil.get('intent')}")
         print(f"Disaster Type   : {hasil.get('disaster_type')}")
         print(f"Confidence      : {hasil.get('confidence')}")
@@ -165,6 +181,8 @@ async def proses_laporan(
         simpan_laporan(
             db=db,
             data={
+                "session_id": payload.session_id, 
+                "processing_time": latensi,
                 "pesan": payload.user_message,
                 "latitude": payload.lat,
                 "longitude": payload.lon,
@@ -243,7 +261,9 @@ async def proses_laporan(
             kategori_laporan=hasil.get(
                 "kategori_laporan",
                 "bukan laporan"
-            )
+            ),
+
+            processing_time=latensi
 
         )
 

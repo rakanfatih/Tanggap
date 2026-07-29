@@ -23,6 +23,15 @@ class Laporan(Base):
         default=datetime.utcnow
     )
 
+    session_id = Column(
+        String,
+        default="default_session"
+    )
+
+    processing_time = Column(
+        Float, default=0.0
+    )
+
     pesan = Column(
         String
     )
