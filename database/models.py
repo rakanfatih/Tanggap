@@ -1,104 +1,71 @@
-from sqlalchemy import Column
-from sqlalchemy import Integer
-from sqlalchemy import String
-from sqlalchemy import Float
-from sqlalchemy import Boolean
-from sqlalchemy import DateTime
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from datetime import datetime
 from database.database import Base
 
-
+# laporan
 class Laporan(Base):
-
     __tablename__ = "laporan"
 
-    id = Column(
-        Integer,
-        primary_key=True,
-        index=True
-    )
+    id = Column(Integer, primary_key=True, index=True)
+    waktu = Column(DateTime, default=datetime.utcnow)
+    session_id = Column(String, default="default_session")
+    processing_time = Column(Float, default=0.0)
+    pesan = Column(String)
+    latitude = Column(Float)
+    longitude = Column(Float)
+    image_path = Column(String, nullable=True)
+    status = Column(String, default="Menunggu")
 
-    waktu = Column(
-        DateTime,
-        default=datetime.utcnow
-    )
+    # relasi
+    router = relationship("Router", back_populates="laporan", uselist=False, cascade="all, delete-orphan")
+    validator = relationship("Validator", back_populates="laporan", uselist=False, cascade="all, delete-orphan")
+    decision = relationship("Decision", back_populates="laporan", uselist=False, cascade="all, delete-orphan")
+    vision = relationship("Vision", back_populates="laporan", uselist=False, cascade="all, delete-orphan")
 
-    session_id = Column(
-        String,
-        default="default_session"
-    )
+# router
+class Router(Base):
+    __tablename__ = "router"
 
-    processing_time = Column(
-        Float, default=0.0
-    )
+    id = Column(Integer, primary_key=True, index=True)
+    laporan_id = Column(Integer, ForeignKey("laporan.id", ondelete="CASCADE"))
+    intent = Column(String)
+    disaster_type = Column(String)
+    confidence = Column(Float)
 
-    pesan = Column(
-        String
-    )
+    laporan = relationship("Laporan", back_populates="router")
 
-    latitude = Column(
-        Float
-    )
+# validator
+class Validator(Base):
+    __tablename__ = "validator"
 
-    longitude = Column(
-        Float
-    )
+    id = Column(Integer, primary_key=True, index=True)
+    laporan_id = Column(Integer, ForeignKey("laporan.id", ondelete="CASCADE"))
+    validation_score = Column(Integer)
 
-    intent = Column(
-        String
-    )
+    laporan = relationship("Laporan", back_populates="validator")
 
-    disaster_type = Column(
-        String
-    )
+# decision
+class Decision(Base):
+    __tablename__ = "decision"
 
-    confidence = Column(
-        Float
-    )
+    id = Column(Integer, primary_key=True, index=True)
+    laporan_id = Column(Integer, ForeignKey("laporan.id", ondelete="CASCADE"))
+    action = Column(String)
+    kategori_laporan = Column(String)
+    eskalasi_posko = Column(Boolean)
+    final_response = Column(String)
 
-    validation_score = Column(
-        Integer
-    )
+    laporan = relationship("Laporan", back_populates="decision")
 
-    action = Column(
-        String
-    )
+# vision
+class Vision(Base):
+    __tablename__ = "vision"
 
-    kategori_laporan = Column(
-        String
-    )
+    id = Column(Integer, primary_key=True, index=True)
+    laporan_id = Column(Integer, ForeignKey("laporan.id", ondelete="CASCADE"))
+    vision_score = Column(Float, nullable=True)
+    vision_result = Column(String, nullable=True)
+    vision_image_path = Column(String, nullable=True)
 
-    eskalasi_posko = Column(
-        Boolean
-    )
-
-    final_response = Column(
-        String
-    )
-
-    # vision
-    image_path = Column(
-        String,
-        nullable=True
-    )
-
-    vision_score = Column(
-        Float,
-        nullable=True
-    )
-
-    vision_result = Column(
-        String,
-        nullable=True
-    )
-
-    vision_image_path = Column(  # Kolom Baru
-        String,
-        nullable=True
-    )
-
-    status = Column(
-        String,
-        default="Menunggu"
-    )
-
+    laporan = relationship("Laporan", back_populates="vision")

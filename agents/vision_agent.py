@@ -1,137 +1,162 @@
 import os
-import cv2
-import numpy as np
-from ultralytics import YOLO
+import base64
+import json
+import shutil
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
+from langchain_core.messages import HumanMessage
 
-from vision.image_validator import validate_image
-from vision.yolo_detector import detect_objects
-from vision.flood_analyzer import analyze_flood
-from vision.fake_detector import detect_fake
 from vision.vision_schema import VisionOutput
-from vision.water_analyzer import analyze_water
-from vision.vehicle_immersion import analyze_vehicle_immersion
-from vision.water_level_estimator import estimate_water_level
+from vision.image_validator import validate_image
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "best_water_seg.pt")
+load_dotenv()
 
-try:
-    model_seg = YOLO(MODEL_PATH)
-    print(f"[VISION] Model segmentasi berhasil dimuat")
-except Exception as e:
-    print(f"[VISION] GAGAL load model segmentasi: {e}")
-    model_seg = None 
-    
-def analyze_image(image_path: str):
+def encode_image(image_path: str):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode('utf-8')
+
+def analyze_image(image_path: str) -> VisionOutput:
     print("\n==============================")
-    print("[VISION AGENT]")
+    print("[VISION AGENT - QWEN V2]")
     print("==============================")
 
-    val_result = validate_image(image_path)
-    image = val_result["image"] 
-    h, w = image.shape[:2]
-
-    water_mask = np.zeros((h, w), dtype=np.uint8)
-
-    if model_seg is not None:
-        seg_results = model_seg.predict(image, conf=0.25, verbose=False)
-        
-        if seg_results[0].masks is not None:
-            masks_data = seg_results[0].masks.data.cpu().numpy()
-            boxes_data = seg_results[0].boxes.xyxy.cpu().numpy()
-            
-            for i, mask in enumerate(masks_data):
-                y1 = boxes_data[i][1]
-                y2 = boxes_data[i][3]
-                
-                center_y = (y1 + y2) / 2
-                
-                if center_y < (h / 2):
-                    continue
-                
-                if y1 < (h * 0.05) and y2 < (h * 0.7):
-                    continue
-                    
-                m_resized = cv2.resize(mask, (w, h))
-                water_mask = cv2.bitwise_or(water_mask, (m_resized * 255).astype(np.uint8))
-
-    detections = detect_objects(image)
-
-    water_result = analyze_water(
-        water_mask, 
-        image.shape
-    )
-
-    immersion_result = analyze_vehicle_immersion(
-        water_mask,
-        detections
-    )
-
-    water_level_result = estimate_water_level(
-        water_mask, 
-        detections
-    )
-    
-    flood = analyze_flood(
-        detections, 
-        water_result, 
-        immersion_result, 
-        water_level_result
-    )
-
-    fake = detect_fake(detections)
-    annotated_image = image.copy()
-
-    if cv2.countNonZero(water_mask) > 0:
-        colored_mask = np.zeros_like(annotated_image)
-        colored_mask[:, :] = [255, 0, 0] 
-        
-        mask_bool = water_mask > 0
-        
-        annotated_image[mask_bool] = cv2.addWeighted(
-            annotated_image[mask_bool], 0.6,
-            colored_mask[mask_bool], 0.4, 0
+    try:
+        val_result = validate_image(image_path)
+        print(f"[VISION] Gambar valid. Resolusi: {val_result['width']}x{val_result['height']}")
+    except Exception as e:
+        print(f"[VISION] Gambar ditolak oleh sistem lokal: {e}")
+        return VisionOutput(
+            flood_detected=False,
+            confidence=0.0,
+            severity="Tidak Terdeteksi",
+            estimated_water_level="Error",
+            estimated_water_cm=0.0,
+            water_percentage=0.0,
+            visible_objects=[],
+            object_count=0,
+            image_quality="Buruk",
+            possible_fake=True,
+            reason=f"Validasi lokal gagal: {str(e)}",
+            vision_image_path=None
         )
 
-    for obj in detections:
-        x1, y1, x2, y2 = obj["bbox"]
-        label = obj["label"]
-        conf = obj["confidence"]
+    # inisialisasi model
+    llm = ChatGroq(
+        model="qwen/qwen3.6-27b",
+        temperature=0.0,
+        max_tokens=2048 
+    )
+
+    base64_image = encode_image(image_path)
+
+    system_instructions = """
+    Kamu adalah Vision Agent ahli analisis bencana banjir untuk BPBD.
+    Analisis foto secara ringkas, langsung berikan respons HANYA DALAM FORMAT JSON murni tanpa penjelasan panjang di luar JSON, sesuai dengan skema berikut:
+    {
+      "flood_detected": true,
+      "confidence": 0.95,
+      "severity": "Tinggi" | "Sedang" | "Rendah" | "Tidak Terdeteksi",
+      "estimated_water_level": "string",
+      "estimated_water_cm": 50.0,
+      "water_percentage": 50.0,
+      "visible_objects": ["objek1", "objek2"],
+      "object_count": 5,
+      "image_quality": "Baik",
+      "possible_fake": false,
+      "reason": "penjelasan singkat"
+    }
+
+    PANDUAN ESTIMASI KEDALAMAN:
+    - Amati proporsi air pada objek referensi terdekat secara objektif.
+    - Hasilkan angka diskrit untuk estimated_water_cm (contoh: 30.0, 50.0), bukan rentang.
+
+    ATURAN SEVERITY:
+    - "Tinggi": Air merendam lebih dari setengah tinggi manusia (>100 cm).
+    - "Sedang": Air merendam sebatas lutut hingga pinggang (40 - 90 cm).
+    - "Rendah": Air merendam area bawah seperti mata kaki atau betis (<35 cm).
+    - "Tidak Terdeteksi": Tidak ada genangan air.
+    """
+
+    message = HumanMessage(
+        content=[
+            {"type": "text", "text": system_instructions},
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+            },
+        ]
+    )
+
+    try:
+        print("[VISION] Sedang memproses gambar via Qwen...")
+        response = llm.invoke([message])
         
-        cv2.rectangle(annotated_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        if not response or not hasattr(response, "content") or not response.content:
+            raise ValueError("API mengembalikan respons kosong (None atau empty content).")
+
+        raw_text = response.content.strip()
+        print(f"[DEBUG] Raw text mentah: {repr(raw_text)}")
+
+        if not raw_text:
+            raise ValueError("Variabel raw_text kosong setelah strip().")
         
-        text = f"{label} {conf:.2f}"
-        cv2.putText(annotated_image, text, (x1, max(15, y1 - 10)), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        if "</think>" in raw_text:
+            raw_text = raw_text.split("</think>")[-1].strip()
+
+        if "```json" in raw_text:
+            parts = raw_text.split("```json")
+            if len(parts) > 1:
+                raw_text = parts[1].split("```")[0].strip()
+        elif "```" in raw_text:
+            parts = raw_text.split("```")
+            if len(parts) > 1:
+                raw_text = parts[1].strip()
+
+        raw_text = raw_text.strip()
+        
+        if not raw_text:
+            raise ValueError("Teks JSON habis setelah dibersihkan dari markdown/tag.")
+
+        data_dict = json.loads(raw_text)
+
+        if isinstance(data_dict.get("flood_detected"), str):
+            data_dict["flood_detected"] = data_dict["flood_detected"].lower() == "true"
+        if isinstance(data_dict.get("possible_fake"), str):
+            data_dict["possible_fake"] = data_dict["possible_fake"].lower() == "true"
+
+        hasil = VisionOutput(**data_dict)
+
+    except Exception as e:
+        print(f"[VISION] Warning/Error saat parsing LLM: {e}")
+        hasil = VisionOutput(
+            flood_detected=False,
+            confidence=0.0,
+            severity="Tidak Terdeteksi",
+            estimated_water_level="Error",
+            estimated_water_cm=0.0,
+            water_percentage=0.0,
+            visible_objects=[],
+            object_count=0,
+            image_quality="Buruk",
+            possible_fake=True,
+            reason=f"Gagal memproses/parsing JSON dari API: {str(e)}"
+        )
 
     base_name = os.path.basename(image_path)
     name, ext = os.path.splitext(base_name)
     vision_filename = f"{name}_vision{ext}" 
-    
     vision_image_path = os.path.join(os.path.dirname(image_path), vision_filename)
-    cv2.imwrite(vision_image_path, annotated_image)
+    
+    if not os.path.exists(vision_image_path):
+        shutil.copy(image_path, vision_image_path)
 
-    hasil = VisionOutput(
-        flood_detected=flood["flood_detected"],
-        confidence=flood["confidence"],
-        severity=flood["severity"],
-        estimated_water_level=flood["estimated_water_level"],
-        estimated_water_cm=flood["estimated_water_cm"],
-        water_percentage=flood["water_percentage"],
-        visible_objects=flood["visible_objects"],
-        object_count=flood["object_count"],
-        image_quality="Baik",
-        possible_fake=fake["possible_fake"],
-        reason=fake["reason"],
-        vision_image_path=vision_image_path
-    )
+    hasil.vision_image_path = vision_image_path
 
-    print("\n===== HASIL VISION =====")
+    print("\n===== HASIL VISION (QWEN) =====")
     print(f"Flood Detected   : {hasil.flood_detected}")
     print(f"Confidence       : {hasil.confidence}")
     print(f"Severity         : {hasil.severity}")
-    print(f"Water Level      : {hasil.estimated_water_level}")
-    print(f"Estimated Water  : {hasil.estimated_water_cm} cm ({hasil.estimated_water_level})")
+    print(f"Estimated Water  : {hasil.estimated_water_cm} cm")
     print(f"Water Area       : {hasil.water_percentage} %")
     print(f"Objects Found    : {hasil.object_count} {hasil.visible_objects}")
     print(f"Possible Fake    : {hasil.possible_fake}")

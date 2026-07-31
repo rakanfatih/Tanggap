@@ -176,7 +176,6 @@ async def proses_laporan(
             "reason": hasil.get("vision_reason", "")
         }
 
-
         # simpan to database
         print("\n[MENYIMPAN KE DATABASE]")
 
@@ -189,39 +188,14 @@ async def proses_laporan(
                 "latitude": payload.lat,
                 "longitude": payload.lon,
                 "image_path": payload.image_path,
-                "intent": hasil.get(
-                    "intent",
-                    "lainnya"
-                ),
-                "disaster_type": hasil.get(
-                    "disaster_type",
-                    "lainnya"
-                ),
-                "confidence": hasil.get(
-                    "confidence",
-                    0.0
-                ),
-                "validation_score": hasil.get(
-                    "validation_score",
-                    0
-                ),
-                "action": hasil.get(
-                    "action",
-                    "reject"
-                ),
-                "kategori_laporan": hasil.get(
-                    "kategori_laporan",
-                    "bukan laporan"
-                ),
-                "eskalasi_posko": hasil.get(
-                    "eskalasi_posko",
-                    False
-                ),
-                "final_response": hasil.get(
-                    "final_response",
-                    "Terjadi kesalahan."
-                ), 
-
+                "intent": hasil.get("intent", "lainnya"),
+                "disaster_type": hasil.get("disaster_type", "lainnya"),
+                "confidence": hasil.get("confidence", 0.0),
+                "validation_score": hasil.get("validation_score", 0),
+                "action": hasil.get("action", "reject"),
+                "kategori_laporan": hasil.get("kategori_laporan", "bukan laporan"),
+                "eskalasi_posko": hasil.get("eskalasi_posko", False),
+                "final_response": hasil.get("final_response", "Terjadi kesalahan."), 
                 "vision_score": hasil.get("vision_confidence"), 
                 "vision_result": json.dumps(vision_detail),
                 "vision_image_path": hasil.get("vision_image_path")
@@ -230,48 +204,17 @@ async def proses_laporan(
 
         print("[DATABASE] Berhasil disimpan")
         return LaporanResponse(
-
-            intent=hasil.get(
-                "intent",
-                "lainnya"
-            ),
-
-            disaster_type=hasil.get(
-                "disaster_type",
-                "lainnya"
-            ),
-
-            confidence=hasil.get(
-                "confidence",
-                0.0
-            ),
-
-            action=hasil.get(
-                "action",
-                "reject"
-            ),
-
-            final_response=hasil.get(
-                "final_response",
-                "Terjadi kesalahan."
-            ),
-
-            eskalasi_posko=hasil.get(
-                "eskalasi_posko",
-                False
-            ),
-
-            kategori_laporan=hasil.get(
-                "kategori_laporan",
-                "bukan laporan"
-            ),
-
+            intent=hasil.get("intent", "lainnya"),
+            disaster_type=hasil.get("disaster_type", "lainnya"),
+            confidence=hasil.get("confidence", 0.0),
+            action=hasil.get("action", "reject"),
+            final_response=hasil.get("final_response", "Terjadi kesalahan."),
+            eskalasi_posko=hasil.get("eskalasi_posko", False),
+            kategori_laporan=hasil.get("kategori_laporan", "bukan laporan"),
             processing_time=latensi
-
         )
 
     except Exception as e:
-
         print("\n========== ERROR ==========")
         print(str(e))
         print("===========================\n")
@@ -293,8 +236,9 @@ def api_get_laporan(
     hasil = []
 
     for item in laporan:
+        intent_val = item.router.intent if item.router else "lainnya"
 
-        if item.intent == "tanya_info":
+        if intent_val == "tanya_info":
             continue
 
         hasil.append(
@@ -305,17 +249,17 @@ def api_get_laporan(
                 latitude=item.latitude,
                 longitude=item.longitude,
                 image_path=item.image_path,
-                vision_score=item.vision_score,
-                vision_result=item.vision_result,
-                vision_image_path=item.vision_image_path,
-                intent=item.intent,
-                disaster_type=item.disaster_type,
-                confidence=item.confidence,
-                validation_score=item.validation_score,
-                action=item.action,
-                kategori_laporan=item.kategori_laporan,
-                eskalasi_posko=item.eskalasi_posko,
-                final_response=item.final_response,
+                vision_score=item.vision.vision_score if item.vision else None,
+                vision_result=item.vision.vision_result if item.vision else None,
+                vision_image_path=item.vision.vision_image_path if item.vision else None,
+                intent=intent_val,
+                disaster_type=item.router.disaster_type if item.router else "lainnya",
+                confidence=item.router.confidence if item.router else 0.0,
+                validation_score=item.validator.validation_score if item.validator else 0,
+                action=item.decision.action if item.decision else "reject",
+                kategori_laporan=item.decision.kategori_laporan if item.decision else "bukan laporan",
+                eskalasi_posko=item.decision.eskalasi_posko if item.decision else False,
+                final_response=item.decision.final_response if item.decision else "Tidak ada respons.",
                 status=item.status
             )
         )
@@ -332,36 +276,36 @@ def api_get_laporan_by_id(
     db: Session = Depends(get_db)
 ):
 
-    laporan = get_laporan_by_id(
+    item = get_laporan_by_id(
         db,
         laporan_id
     )
 
-    if laporan is None:
+    if item is None:
         raise HTTPException(
             status_code=404,
             detail="Laporan tidak ditemukan."
         )
 
     return DashboardLaporan(
-        id=laporan.id,
-        waktu=laporan.waktu.strftime("%d-%m-%Y %H:%M"),
-        pesan=laporan.pesan,
-        latitude=laporan.latitude,
-        longitude=laporan.longitude,
-        image_path=laporan.image_path,
-        vision_score=laporan.vision_score,            
-        vision_result=laporan.vision_result,           
-        vision_image_path=laporan.vision_image_path,
-        intent=laporan.intent,
-        disaster_type=laporan.disaster_type,
-        confidence=laporan.confidence,
-        validation_score=laporan.validation_score,
-        action=laporan.action,
-        kategori_laporan=laporan.kategori_laporan,
-        eskalasi_posko=laporan.eskalasi_posko,
-        final_response=laporan.final_response,
-        status=laporan.status
+        id=item.id,
+        waktu=item.waktu.strftime("%d-%m-%Y %H:%M"),
+        pesan=item.pesan,
+        latitude=item.latitude,
+        longitude=item.longitude,
+        image_path=item.image_path,
+        vision_score=item.vision.vision_score if item.vision else None,
+        vision_result=item.vision.vision_result if item.vision else None,
+        vision_image_path=item.vision.vision_image_path if item.vision else None,
+        intent=item.router.intent if item.router else "lainnya",
+        disaster_type=item.router.disaster_type if item.router else "lainnya",
+        confidence=item.router.confidence if item.router else 0.0,
+        validation_score=item.validator.validation_score if item.validator else 0,
+        action=item.decision.action if item.decision else "reject",
+        kategori_laporan=item.decision.kategori_laporan if item.decision else "bukan laporan",
+        eskalasi_posko=item.decision.eskalasi_posko if item.decision else False,
+        final_response=item.decision.final_response if item.decision else "Tidak ada respons.",
+        status=item.status
     )
 
 @app.put("/api/laporan/{laporan_id}/status")
@@ -397,6 +341,10 @@ async def get_map_data(
     hasil = []
 
     for item in laporan:
+        intent_val = item.router.intent if item.router else "lainnya"
+        if intent_val == "tanya_info":
+            continue
+
         hasil.append(
             {
                 "id": item.id,
@@ -404,7 +352,7 @@ async def get_map_data(
                 "latitude": item.latitude,
                 "longitude": item.longitude,
                 "pesan": item.pesan,
-                "kategori": item.kategori_laporan,
+                "kategori": item.decision.kategori_laporan if item.decision else "bukan laporan",
                 "status": item.status
             }
         )
@@ -417,23 +365,11 @@ async def upload_image(
 ):
 
     ext = image.filename.split(".")[-1]
-
     filename = f"{uuid.uuid4()}.{ext}"
+    filepath = os.path.join("uploads", filename)
 
-    filepath = os.path.join(
-        "uploads",
-        filename
-    )
-
-    with open(
-        filepath,
-        "wb"
-    ) as buffer:
-
-        shutil.copyfileobj(
-            image.file,
-            buffer
-        )
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(image.file, buffer)
 
     return {
         "filename": filename,
@@ -442,7 +378,6 @@ async def upload_image(
 
 # run
 if __name__ == "__main__":
-
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
