@@ -1,12 +1,20 @@
 import cv2
 
-# perkiraan tinggi objek
+# perkiraan tinggi objek (cm)
 REFERENCE_OBJECTS = {
     "person": 170,
     "car": 150,
     "bus": 320,
     "truck": 340,
     "motorcycle": 110
+}
+
+VALID_ASPECT_RATIOS = {
+    "person": (0.1, 0.8),    
+    "car": (0.8, 3.5),      
+    "bus": (0.8, 4.0),
+    "truck": (0.8, 4.0),
+    "motorcycle": (0.4, 2.0)
 }
 
 ROW_WET_THRESHOLD = 0.3
@@ -22,8 +30,15 @@ def estimate_water_level(water_mask, detections):
 
         x1, y1, x2, y2 = obj["bbox"]
         object_height = y2 - y1
+        object_width = x2 - x1
 
-        if object_height <= 0:
+        if object_height <= 0 or object_width <= 0:
+            continue
+
+        aspect_ratio = object_width / object_height
+        min_ar, max_ar = VALID_ASPECT_RATIOS.get(label, (0.0, 5.0))
+
+        if not (min_ar <= aspect_ratio <= max_ar):
             continue
 
         h, w = water_mask.shape
@@ -37,7 +52,16 @@ def estimate_water_level(water_mask, detections):
         
         if rows == 0:
             continue
-            
+
+        bottom_margin = max(1, int(rows * 0.1))
+        bottom_roi = roi[-bottom_margin:, :]
+
+        bottom_water_pixels = cv2.countNonZero(bottom_roi)
+        bottom_total_pixels = bottom_roi.shape[0] * bottom_roi.shape[1]
+
+        if bottom_water_pixels < (bottom_total_pixels * 0.05):
+            continue
+        
         submerged = 0
         dry_gap = 0
 
@@ -53,8 +77,7 @@ def estimate_water_level(water_mask, detections):
                 if dry_gap > MAX_DRY_GAP:
                     break
 
-        ratio = submerged / object_height
-        
+        ratio = submerged / object_height   
         ratio = min(ratio, 1.0)
         
         real_height = REFERENCE_OBJECTS[label]
