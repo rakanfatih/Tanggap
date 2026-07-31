@@ -92,7 +92,13 @@ class Laporan(Base):
         nullable=True
     )
 
+    vision_image_path = Column(  # Kolom Baru
+        String,
+        nullable=True
+    )
+
     status = Column(
         String,
         default="Menunggu"
     )
+

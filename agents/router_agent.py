@@ -149,7 +149,8 @@ def route_message(
     chain = prompt | structured_llm
 
     result = chain.invoke({
-        "user_message": user_message
+        "user_message": user_message,
+        "chat_history": chat_history
     })
 
     print(f"Intent: {result.intent}")

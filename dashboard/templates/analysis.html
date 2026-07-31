@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisis Laporan - BPBD Tanggap</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="app-wrapper">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <i class="fa-solid fa-shield-halved fa-3x mb-2"></i>
+            <h3>tanggap</h3>
+        </div>
+        <ul class="nav-menu">
+            <li><a href="/"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+            <li><a href="/daftar-laporan"><i class="fa-solid fa-file-lines"></i> Laporan</a></li>
+            <li><a href="/analysis" class="active"><i class="fa-solid fa-chart-pie"></i> Analysis</a></li>
+        </ul>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <header class="top-header">
+            <i class="fa-solid fa-circle-user profile-icon"></i>
+        </header>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="m-0 fw-bold text-gray-800"><i class="fa-solid fa-chart-line text-primary me-2"></i> Analisis & Statistik</h4>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <!-- Tren Waktu Laporan -->
+            <div class="col-lg-8">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="m-0 fw-bold text-primary">Tren Laporan Harian</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="trendChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Kategori Laporan -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="m-0 fw-bold text-success">Proporsi Kategori Insiden</h6>
+                    </div>
+                    <div class="card-body d-flex justify-content-center">
+                        <canvas id="kategoriChart" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Objek Terdeteksi -->
+            <div class="col-lg-6">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="m-0 fw-bold text-warning">Objek Paling Sering Terdeteksi (Vision AI)</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="objectChart" height="150"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tingkat Keparahan -->
+            <div class="col-lg-6">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="m-0 fw-bold text-danger">Tingkat Keparahan (Severity)</h6>
+                    </div>
+                    <div class="card-body d-flex justify-content-center">
+                        <canvas id="severityChart" height="150"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    const rawData = {{ laporan | tojson | safe }};
+    
+    const trendData = {};
+    const kategoriData = { "insiden terverifikasi": 0, "perlu tinjauan": 0, "bukan laporan": 0 };
+    const objectData = {};
+    const severityData = { "Tinggi": 0, "Sedang": 0, "Rendah": 0 };
+
+    rawData.forEach(item => {
+        if (item.intent === "tanya_info") return;
+
+        const datePart = item.waktu.split(" ")[0]; 
+        trendData[datePart] = (trendData[datePart] || 0) + 1;
+
+        if (kategoriData[item.kategori_laporan] !== undefined) {
+            kategoriData[item.kategori_laporan]++;
+        }
+
+        if (item.vision_result) {
+            try {
+                const vision = JSON.parse(item.vision_result);
+                
+                if (severityData[vision.severity] !== undefined) {
+                    severityData[vision.severity]++;
+                }
+
+                if (vision.objects && vision.objects !== "Tidak ada") {
+                    const objects = vision.objects.split(", ");
+                    objects.forEach(obj => {
+                        const cleanObj = obj.trim();
+                        objectData[cleanObj] = (objectData[cleanObj] || 0) + 1;
+                    });
+                }
+            } catch(e) {}
+        }
+    });
+
+    
+    new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+            labels: Object.keys(trendData).sort(),
+            datasets: [{
+                label: 'Jumlah Laporan',
+                data: Object.keys(trendData).sort().map(k => trendData[k]),
+                borderColor: '#4e73df',
+                backgroundColor: 'rgba(78, 115, 223, 0.1)',
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    new Chart(document.getElementById('kategoriChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Terverifikasi', 'Perlu Tinjauan', 'Bukan Laporan'],
+            datasets: [{
+                data: [
+                    kategoriData["insiden terverifikasi"], 
+                    kategoriData["perlu tinjauan"], 
+                    kategoriData["bukan laporan"]
+                ],
+                backgroundColor: ['#1cc88a', '#f6c23e', '#858796']
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    const sortedObjects = Object.entries(objectData).sort((a,b) => b[1] - a[1]); // Urutkan dari terbanyak
+    new Chart(document.getElementById('objectChart'), {
+        type: 'bar',
+        data: {
+            labels: sortedObjects.map(obj => obj[0]),
+            datasets: [{
+                label: 'Frekuensi Muncul',
+                data: sortedObjects.map(obj => obj[1]),
+                backgroundColor: '#36b9cc'
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    new Chart(document.getElementById('severityChart'), {
+        type: 'polarArea',
+        data: {
+            labels: ['Tinggi', 'Sedang', 'Rendah'],
+            datasets: [{
+                data: [severityData["Tinggi"], severityData["Sedang"], severityData["Rendah"]],
+                backgroundColor: [
+                    'rgba(231, 74, 59, 0.7)',
+                    'rgba(246, 194, 62, 0.7)',
+                    'rgba(241, 196, 15, 0.7)'
+                ]
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+</script>
+</body>
+</html>

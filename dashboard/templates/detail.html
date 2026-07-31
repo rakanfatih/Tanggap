@@ -1,233 +1,145 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-
     <meta charset="UTF-8">
-
-    <title>Detail Laporan</title>
-
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet">
-
+    <title>Detail Laporan #{{ laporan.id }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card-header { background-color: #fff; font-weight: bold; border-bottom: 2px solid #eaecf4; }
+        .info-label { font-size: 0.85rem; color: #858796; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;}
+        .info-value { font-size: 1.1rem; color: #3a3b45; font-weight: 500; margin-bottom: 15px;}
+        .img-container { position: relative; width: 100%; background: #000; border-radius: 8px; overflow: hidden; }
+        .img-container img { width: 100%; height: auto; display: block; }
+    </style>
 </head>
+<body>
 
-<body class="bg-light">
-
-<div class="container py-5">
-
-    <div class="card shadow">
-
-        <div class="card-header">
-
-            <h3>
-                Detail Laporan #{{ laporan.id }}
-            </h3>
-
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h3 mb-0 text-gray-800">
+            <a href="/daftar-laporan" class="btn btn-sm btn-outline-secondary me-3"><i class="fa-solid fa-arrow-left"></i> Kembali</a>
+            Insiden #{{ laporan.id }}
+        </h2>
+        <div>
+            {% if laporan.kategori_laporan == "insiden terverifikasi" %}
+                <span class="badge bg-success fs-6"><i class="fa-solid fa-circle-check"></i> Terverifikasi AI</span>
+            {% elif laporan.kategori_laporan == "perlu tinjauan" %}
+                <span class="badge bg-warning text-dark fs-6"><i class="fa-solid fa-triangle-exclamation"></i> Perlu Tinjauan</span>
+            {% else %}
+                <span class="badge bg-secondary fs-6"><i class="fa-solid fa-ban"></i> Bukan Laporan</span>
+            {% endif %}
+            <span class="badge bg-primary fs-6 ms-2">Status: {{ laporan.status }}</span>
         </div>
-
-        <div class="card-body">
-
-            <table class="table table-bordered">
-
-                <tr>
-                    <th width="220">Waktu</th>
-                    <td>{{ laporan.waktu }}</td>
-                </tr>
-
-                <tr>
-                    <th>Pesan</th>
-                    <td>{{ laporan.pesan }}</td>
-                </tr>
-
-                <tr>
-                    <th>Latitude</th>
-                    <td>{{ laporan.latitude }}</td>
-                </tr>
-
-                <tr>
-                    <th>Longitude</th>
-                    <td>{{ laporan.longitude }}</td>
-                </tr>
-
-                <tr>
-                    <th>Intent</th>
-                    <td>{{ laporan.intent }}</td>
-                </tr>
-
-                <tr>
-                    <th>Jenis Bencana</th>
-                    <td>{{ laporan.disaster_type }}</td>
-                </tr>
-
-                <tr>
-                    <th>Confidence</th>
-                    <td>{{ laporan.confidence }}</td>
-                </tr>
-
-                <tr>
-                    <th>Validation Score</th>
-                    <td>{{ laporan.validation_score }}</td>
-                </tr>
-
-                <tr>
-                    <th>Action</th>
-                    <td>{{ laporan.action }}</td>
-                </tr>
-
-                <tr>
-                    <th>Kategori</th>
-                    <td>
-
-                        {% if laporan.kategori_laporan == "insiden terverifikasi" %}
-
-                            <span class="badge bg-success">
-                                {{ laporan.kategori_laporan }}
-                            </span>
-
-                        {% elif laporan.kategori_laporan == "perlu tinjauan" %}
-
-                            <span class="badge bg-warning text-dark">
-                                {{ laporan.kategori_laporan }}
-                            </span>
-
-                        {% else %}
-
-                            <span class="badge bg-secondary">
-                                {{ laporan.kategori_laporan }}
-                            </span>
-
-                        {% endif %}
-
-                    </td>
-                </tr>
-
-                <tr>
-                    <th>Status</th>
-                    <td>
-
-                        {% if laporan.status == "Menunggu" %}
-
-                            <span class="badge bg-warning text-dark">
-                                {{ laporan.status }}
-                            </span>
-
-                        {% elif laporan.status == "Diproses" %}
-
-                            <span class="badge bg-primary">
-                                {{ laporan.status }}
-                            </span>
-
-                        {% else %}
-
-                            <span class="badge bg-success">
-                                {{ laporan.status }}
-                            </span>
-
-                        {% endif %}
-
-                    </td>
-                </tr>
-
-                <tr>
-                    <th>Response Agent</th>
-                    <td>{{ laporan.final_response }}</td>
-                </tr>
-
-            </table>
-
-            <!-- FOTO BUKTI -->
-
-            <div class="card mt-4">
-
-                <div class="card-header">
-
-                    <strong>
-                        📷 Foto Bukti
-                    </strong>
-
-                </div>
-
-                <div class="card-body text-center">
-
-                    {% if laporan.image_path %}
-
-                        <img
-                            src="{{ api_base }}/{{ laporan.image_path }}"
-                            class="img-fluid rounded shadow"
-                            style="max-height:500px;">
-
-                    {% else %}
-
-                        <p class="text-muted mb-0">
-                            Belum ada foto bukti.
-                        </p>
-
-                    {% endif %}
-
-                </div>
-
-            </div>
-
-            <!-- VISION AGENT -->
-
-            <div class="card mt-4">
-
-                <div class="card-header">
-
-                    <strong>
-                        🤖 Vision Agent
-                    </strong>
-
-                </div>
-
-                <div class="card-body">
-
-                    {% if laporan.vision_result %}
-
-                        <h5>
-                            {{ laporan.vision_result }}
-                        </h5>
-
-                        <hr>
-
-                        <strong>
-                            Confidence :
-                        </strong>
-
-                        {{ laporan.vision_score }}
-
-                    {% else %}
-
-                        <span class="badge bg-secondary">
-                            Belum diproses
-                        </span>
-
-                    {% endif %}
-
-                </div>
-
-            </div>
-
-            <div class="mt-4">
-
-                <a
-                    href="/"
-                    class="btn btn-secondary">
-
-                    ← Kembali
-
-                </a>
-
-            </div>
-
-        </div>
-
     </div>
 
+    <div class="row">
+        <!-- Kolom Kiri: Info Umum -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header py-3"><i class="fa-solid fa-circle-info text-primary"></i> Info Laporan</div>
+                <div class="card-body">
+                    <div class="info-label">Waktu Kejadian</div>
+                    <div class="info-value">{{ laporan.waktu }}</div>
+                    
+                    <div class="info-label">Lokasi Koordinat</div>
+                    <div class="info-value mb-2">
+                        {{ laporan.latitude }}, {{ laporan.longitude }}
+                    </div>
+                    <a href="https://www.google.com/maps?q={{ laporan.latitude }},{{ laporan.longitude }}" target="_blank" class="btn btn-sm btn-outline-primary mb-3">
+                        <i class="fa-solid fa-map-location-dot"></i> Buka di Google Maps
+                    </a>
+
+                    <div class="info-label">Skor Validasi Lokasi/Cuaca</div>
+                    <div class="info-value">{{ laporan.validation_score }}/100</div>
+
+                    <div class="info-label">Pesan Pelapor</div>
+                    <div class="p-3 bg-light border rounded mb-3" style="font-style: italic;">
+                        "{{ laporan.pesan }}"
+                    </div>
+
+                    <div class="info-label">Respons Otomatis (GARDA)</div>
+                    <div class="p-3 bg-primary text-white border rounded">
+                        {{ laporan.final_response }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kolom Kanan: Hasil Vision -->
+        <div class="col-lg-8">
+            <!-- Data Ekstraksi Vision -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header py-3"><i class="fa-solid fa-eye text-success"></i> Ekstraksi Data Visual (Vision AI)</div>
+                <div class="card-body">
+                    {% if laporan.vision_detail %}
+                    <div class="row text-center">
+                        <div class="col-md-3 border-end">
+                            <div class="info-label">Tingkat Keparahan</div>
+                            <h4 class="text-danger fw-bold">{{ laporan.vision_detail.severity }}</h4>
+                        </div>
+                        <div class="col-md-3 border-end">
+                            <div class="info-label">Estimasi Kedalaman</div>
+                            <h4 class="text-primary fw-bold">{{ laporan.vision_detail.water_cm }} cm</h4>
+                        </div>
+                        <div class="col-md-3 border-end">
+                            <div class="info-label">Luas Genangan</div>
+                            <h4 class="text-info fw-bold">{{ laporan.vision_detail.water_percentage }}%</h4>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="info-label">Objek Terdeteksi</div>
+                            <div class="fw-bold" style="font-size: 0.9rem; margin-top:5px;">{{ laporan.vision_detail.objects }}</div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="mt-2 text-muted small">
+                        <i class="fa-solid fa-robot"></i> <strong>Catatan AI:</strong> {{ laporan.vision_detail.reason }}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center mb-0">Tidak ada analisis visual yang tersedia.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Media Foto -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header py-3"><i class="fa-solid fa-images text-warning"></i> Bukti Visual</div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Foto Asli -->
+                        <div class="col-md-6 text-center">
+                            <div class="info-label mb-2">Foto Asli Pelapor</div>
+                            {% if laporan.image_path %}
+                                <div class="img-container shadow-sm">
+                                    <img src="{{ api_base }}/{{ laporan.image_path }}" alt="Foto Laporan">
+                                </div>
+                            {% else %}
+                                <div class="p-5 bg-light border rounded text-muted">Tidak ada foto terlampir.</div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Foto Hasil Analisis (Bounding Box/Mask) -->
+                        <div class="col-md-6 text-center mt-3 mt-md-0">
+                            <div class="info-label mb-2">Hasil Segmentasi AI</div>
+                            {% if laporan.vision_image_path %}
+                                <div class="img-container shadow-sm border border-success">
+                                    <img src="{{ api_base }}/{{ laporan.vision_image_path }}" alt="Foto Analisis AI">
+                                </div>
+                            {% else %}
+                                <div class="p-5 bg-light border rounded text-muted d-flex flex-column justify-content-center align-items-center h-100">
+                                    <i class="fa-solid fa-image-slash fa-2x mb-2"></i>
+                                    <div>Foto analisis belum/tidak digenerate oleh AI.</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>

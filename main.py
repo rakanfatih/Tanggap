@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi import UploadFile, File
 import json
 
-load_dotenv()
+load_dotenv(override=True)
 
 # FastAPI  
 app = FastAPI(
@@ -33,7 +33,7 @@ app.mount(
 )
 
 DASHBOARD_URL = os.getenv(
-    "DASHBOARD_URL", 
+    "DASHBOARD_URL",
     "http://127.0.0.1:5000"
     )
 
@@ -42,6 +42,7 @@ app.add_middleware(
     allow_origins=[
         DASHBOARD_URL,
         "http://localhost:5000",
+        "http://127.0.0.1:8000",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -99,6 +100,7 @@ class DashboardLaporan(BaseModel):
     image_path: Optional[str] = None
     vision_score: Optional[float] = None
     vision_result: Optional[str] = None
+    vision_image_path: Optional[str] = None
     intent: str
     disaster_type: str
     confidence: float
@@ -221,7 +223,8 @@ async def proses_laporan(
                 ), 
 
                 "vision_score": hasil.get("vision_confidence"), 
-                "vision_result": json.dumps(vision_detail)
+                "vision_result": json.dumps(vision_detail),
+                "vision_image_path": hasil.get("vision_image_path")
             }
         )
 
@@ -290,16 +293,21 @@ def api_get_laporan(
     hasil = []
 
     for item in laporan:
+
+        if item.intent == "tanya_info":
+            continue
+
         hasil.append(
             DashboardLaporan(
                 id=item.id,
-                waktu=str(item.waktu),
+                waktu=item.waktu.strftime("%d-%m-%Y %H:%M"),
                 pesan=item.pesan,
                 latitude=item.latitude,
                 longitude=item.longitude,
                 image_path=item.image_path,
                 vision_score=item.vision_score,
                 vision_result=item.vision_result,
+                vision_image_path=item.vision_image_path,
                 intent=item.intent,
                 disaster_type=item.disaster_type,
                 confidence=item.confidence,
@@ -337,11 +345,14 @@ def api_get_laporan_by_id(
 
     return DashboardLaporan(
         id=laporan.id,
-        waktu=str(laporan.waktu),
+        waktu=laporan.waktu.strftime("%d-%m-%Y %H:%M"),
         pesan=laporan.pesan,
         latitude=laporan.latitude,
         longitude=laporan.longitude,
         image_path=laporan.image_path,
+        vision_score=laporan.vision_score,            
+        vision_result=laporan.vision_result,           
+        vision_image_path=laporan.vision_image_path,
         intent=laporan.intent,
         disaster_type=laporan.disaster_type,
         confidence=laporan.confidence,

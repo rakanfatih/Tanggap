@@ -1,5 +1,6 @@
 import cv2
 
+# perkiraan tinggi objek
 REFERENCE_OBJECTS = {
     "person": 170,
     "car": 150,
@@ -8,12 +9,13 @@ REFERENCE_OBJECTS = {
     "motorcycle": 110
 }
 
-def estimate_water_level(water_mask, detections):
+ROW_WET_THRESHOLD = 0.3
+MAX_DRY_GAP = 3
 
+def estimate_water_level(water_mask, detections):
     estimates = []
 
     for obj in detections:
-
         label = obj["label"]
         if label not in REFERENCE_OBJECTS:
             continue
@@ -24,20 +26,37 @@ def estimate_water_level(water_mask, detections):
         if object_height <= 0:
             continue
 
-        roi = water_mask[y1:y2, x1:x2]
+        h, w = water_mask.shape
+        roi_y1 = max(0, y1)
+        roi_y2 = min(h, y2)
+        roi_x1 = max(0, x1 - 10)
+        roi_x2 = min(w, x2 + 10)
+
+        roi = water_mask[roi_y1:roi_y2, roi_x1:roi_x2]
         rows = roi.shape[0]
+        
+        if rows == 0:
+            continue
+            
         submerged = 0
+        dry_gap = 0
 
         for i in range(rows - 1, -1, -1):
             row = roi[i]
             white = cv2.countNonZero(row)
 
-            if white > row.shape[0] * 0.5:
-                submerged += 1
+            if white > row.shape[0] * ROW_WET_THRESHOLD:
+                submerged += 1 + dry_gap  
+                dry_gap = 0
             else:
-                break
+                dry_gap += 1
+                if dry_gap > MAX_DRY_GAP:
+                    break
 
         ratio = submerged / object_height
+        
+        ratio = min(ratio, 1.0)
+        
         real_height = REFERENCE_OBJECTS[label]
         estimated_cm = ratio * real_height
         

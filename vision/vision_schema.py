@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class VisionOutput(BaseModel):
     flood_detected: bool
@@ -12,3 +13,4 @@ class VisionOutput(BaseModel):
     image_quality: str
     possible_fake: bool
     reason: str
+    vision_image_path: Optional[str] = None

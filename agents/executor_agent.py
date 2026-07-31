@@ -164,7 +164,8 @@ def execute_response(
             "action": action,
             "kategori_laporan": kategori_laporan,
             "reason": reason,
-            "context": context
+            "context": context,
+            "chat_history": chat_history
         }
     )
 

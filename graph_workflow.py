@@ -45,6 +45,7 @@ class GraphState(TypedDict):
     image_quality: Optional[str]
     possible_fake: Optional[bool]
     vision_reason: Optional[str]
+    vision_image_path: Optional[str]
 
     # retriever
     context: Optional[str]
@@ -119,7 +120,8 @@ def node_vision(state: GraphState):
         "object_count": hasil.object_count,
         "image_quality": hasil.image_quality,
         "possible_fake": hasil.possible_fake,
-        "vision_reason": hasil.reason
+        "vision_reason": hasil.reason,
+        "vision_image_path": hasil.vision_image_path
     }
 
 # retriever node
@@ -183,7 +185,7 @@ def router_condition(state: GraphState):
     intent = state["intent"]
 
     if intent == "lapor_darurat":
-        return "validator"
+        return ["validator", "vision"]
     elif intent == "tanya_info":
         return "retriever"
     else:
@@ -192,74 +194,26 @@ def router_condition(state: GraphState):
 # build  
 workflow = StateGraph(GraphState)
 
-workflow.add_node(
-    "router",
-    node_router
-)
+workflow.add_node("router", node_router)
+workflow.add_node("validator", node_validator)
+workflow.add_node("vision", node_vision)
+workflow.add_node("retriever", node_retriever)
+workflow.add_node("decision", node_decision)
+workflow.add_node("executor", node_executor)
 
-workflow.add_node(
-    "validator",
-    node_validator
-)
-
-workflow.add_node(
-    "vision",
-    node_vision
-)
-
-workflow.add_node(
-    "retriever",
-    node_retriever
-)
-
-workflow.add_node(
-    "decision",
-    node_decision
-)
-
-workflow.add_node(
-    "executor",
-    node_executor
-)
-
-workflow.set_entry_point(
-    "router"
-)
+workflow.set_entry_point("router")
 
 workflow.add_conditional_edges(
     "router",
     router_condition,
-    {
-        "validator": "validator",
-        "retriever": "retriever",
-        "decision": "decision"
-    }
+    ["validator", "vision", "retriever", "decision"]
 )
 
-workflow.add_edge(
-    "validator",
-    "vision"
-)
-
-workflow.add_edge(
-    "vision",
-    "decision"
-)
-
-workflow.add_edge(
-    "retriever",
-    "decision"
-)
-
-workflow.add_edge(
-    "decision",
-    "executor"
-)
-
-workflow.add_edge(
-    "executor",
-    END
-)
+workflow.add_edge("validator","decision")
+workflow.add_edge("vision","decision")
+workflow.add_edge("retriever","decision")
+workflow.add_edge("decision","executor")
+workflow.add_edge("executor",END)
 
 app = workflow.compile()
 

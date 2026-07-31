@@ -6,6 +6,7 @@ def simpan_laporan(
     db: Session,
     data: dict
 ):
+    status_awal = "Diproses" if data.get("kategori_laporan") == "insiden terverifikasi" else "Menunggu"
 
     laporan = Laporan(
         session_id=data.get("session_id", "default_session"),
@@ -23,7 +24,9 @@ def simpan_laporan(
         eskalasi_posko=data["eskalasi_posko"],
         final_response=data["final_response"],
         vision_score=data.get("vision_score"),
-        vision_result=data.get("vision_result")
+        vision_result=data.get("vision_result"),
+        vision_image_path=data.get("vision_image_path"),
+        status=status_awal
     )
 
     db.add(laporan)
