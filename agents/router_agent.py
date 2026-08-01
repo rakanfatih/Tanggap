@@ -9,31 +9,16 @@ load_dotenv()
 # output 
 class RouterOutput(BaseModel):
 
-    intent: str = Field(
-        description="hanya boleh berisi: lapor_darurat, tanya_info, atau lainnya"
-    )
-
-    disaster_type: str = Field(
-        description="jenis bencana: banjir, gempa, longsor, kebakaran, tsunami, angin, kriminalitas, kecelakaan, spam, lainnya"
-    )
-
-    confidence: float = Field(
-        description="nilai keyakinan 0 sampai 1"
-    )
-
-    alasan: str = Field(
-        description="alasan klasifikasi"
-    )
+    intent: str = Field(description="hanya boleh berisi: lapor_darurat, tanya_info, atau lainnya")
+    disaster_type: str = Field(description="jenis bencana: banjir, gempa, longsor, kebakaran, tsunami, angin, kriminalitas, kecelakaan, spam, lainnya")
+    confidence: float = Field(description="nilai keyakinan 0 sampai 1")
+    alasan: str = Field(description="alasan klasifikasi")
 
 # router agent
 def route_message(
         user_message: str,
         chat_history: str = ""
 ):
-
-    print("\n==============================")
-    print("[ROUTER AGENT]")
-    print("==============================")
 
     llm = ChatGroq(
         model="llama-3.3-70b-versatile",
@@ -46,22 +31,15 @@ def route_message(
 
     system_prompt = """
         Kamu adalah Router Agent pada sistem koordinasi bencana BPBD.
-
         Tugasmu HANYA mengklasifikasikan pesan warga.
 
-        ==================================================
-        INTENT
-        ==================================================
-
+        [INTENT]
         Hanya boleh memilih SATU:
         1. lapor_darurat
         2. tanya_info
         3. lainnya
 
-        ==================================================
-        ATURAN LAPOR_DARURAT
-        ==================================================
-
+        [ATURAN LAPOR_DARURAT]
         Pilih "lapor_darurat" HANYA jika warga melaporkan kejadian BANJIR.
         Contoh:
         - rumah kebanjiran
@@ -73,10 +51,7 @@ def route_message(
         - terjebak banjir
         - butuh evakuasi banjir
 
-        ==================================================
-        ATURAN TANYA_INFO
-        ==================================================
-
+        [ATURAN TANYA_INFO]
         Jika warga bertanya mengenai:
         - SOP banjir
         - evakuasi banjir
@@ -85,10 +60,7 @@ def route_message(
         - bantuan banjir
         - langkah menghadapi banjir
 
-        ==================================================
-        LAINNYA
-        ==================================================
-
+        [LAINNYA]
         SEMUA kondisi berikut WAJIB memilih "lainnya":
         - gempa
         - tsunami
@@ -104,10 +76,7 @@ def route_message(
         - salam
         - percakapan biasa
 
-        ==================================================
-        DISASTER TYPE
-        ==================================================
-
+        [DISASTER TYPE]
         Pilih salah satu:
         banjir
         gempa
@@ -120,10 +89,7 @@ def route_message(
         spam
         lainnya
 
-        ==================================================
-        PENTING
-        ==================================================
-
+        [SANGAT PENTING]
         Jika pesan membahas GEMPA,
         MAKA:
         intent = lainnya
@@ -152,11 +118,6 @@ def route_message(
         "user_message": user_message,
         "chat_history": chat_history
     })
-
-    print(f"Intent: {result.intent}")
-    print(f"Disaster Type: {result.disaster_type}")
-    print(f"Confidence: {result.confidence}")
-    print(f"Reason: {result.alasan}")
 
     return result
 

@@ -166,15 +166,8 @@ def validasi_laporan(
     lat: float,
     lon: float
 ):
-
-    print("\n==============================")
-    print("[VALIDATOR AGENT]")
-    print("==============================")
-
-    print(f"Koordinat : [{lat}, {lon}]")
-
+    
     gps_valid = koordinat_valid(lat, lon)
-
     hasil_cuaca = cek_cuaca_aktual(lat, lon)
 
     if gps_valid:
@@ -193,12 +186,7 @@ def validasi_laporan(
 
     hasil = {
         "pesan_asli": user_message,
-
-        "koordinat": {
-            "latitude": lat,
-            "longitude": lon
-        },
-
+        "koordinat": {"latitude": lat,"longitude": lon},
         "alamat_lengkap": hasil_lokasi["address"],
         "gps_valid": hasil_lokasi["gps_valid"],
         "kondisi_cuaca": hasil_cuaca["weather"],
@@ -206,14 +194,6 @@ def validasi_laporan(
         "is_hujan": hasil_cuaca["is_raining"],
         "validation_score": validation_score
     }
-
-    print("\n===== HASIL VALIDASI =====")
-
-    print(f"Alamat            : {hasil['alamat_lengkap']}")
-    print(f"GPS Valid         : {hasil['gps_valid']}")
-    print(f"Cuaca             : {hasil['kondisi_cuaca']}")
-    print(f"Hujan             : {hasil['is_hujan']}")
-    print(f"Validation Score  : {hasil['validation_score']}")
 
     return hasil
 

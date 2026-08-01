@@ -15,25 +15,17 @@ def retrieve_sop_info(
     k: int = 5
 ):
 
-    print("\n==============================")
-    print("[RETRIEVER AGENT]")
-    print("==============================")
-
-    print(f"Query : {query}")
-
     embeddings = HuggingFaceEmbeddings(
         model_name="BAAI/bge-m3"
     )
 
     try:
-
         vectorstore = Chroma(
             persist_directory=str(VECTOR_DB_PATH),
             embedding_function=embeddings
         )
 
     except Exception as e:
-
         print(f"[RETRIEVER] Error membuka VectorDB : {e}")
 
         return {
@@ -42,14 +34,12 @@ def retrieve_sop_info(
         }
 
     try:
-
         documents = vectorstore.similarity_search(
             query,
             k=k
         )
 
     except Exception as e:
-
         print(f"[RETRIEVER] Error similarity search : {e}")
 
         return {
@@ -58,7 +48,6 @@ def retrieve_sop_info(
         }
 
     if not documents:
-
         print("[RETRIEVER] Tidak ada referensi ditemukan.")
 
         return {
@@ -69,7 +58,6 @@ def retrieve_sop_info(
     context = ""
 
     for i, doc in enumerate(documents):
-
         context += (
             f"[Referensi {i+1}]\n"
             f"{doc.page_content}\n\n"

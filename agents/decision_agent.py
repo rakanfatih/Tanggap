@@ -2,21 +2,10 @@ from pydantic import BaseModel, Field
 
 class DecisionOutput(BaseModel):
 
-    action: str = Field(
-        description="escalate, respond, atau reject"
-    )
-
-    eskalasi_posko: bool = Field(
-        description="true jika laporan diteruskan ke dashboard BPBD"
-    )
-
-    kategori_laporan: str = Field(
-        description="insiden terverifikasi, perlu tinjauan, atau bukan laporan"
-    )
-
-    reason: str = Field(
-        description="alasan keputusan"
-    )
+    action: str = Field(description="escalate, respond, atau reject")
+    eskalasi_posko: bool = Field(description="true jika laporan diteruskan ke dashboard BPBD")
+    kategori_laporan: str = Field(description="insiden terverifikasi, perlu tinjauan, atau bukan laporan")
+    reason: str = Field(description="alasan keputusan")
 
 def make_decision(
     intent: str,
@@ -25,20 +14,9 @@ def make_decision(
     flood_detected: bool | None = None,
     vision_confidence: float | None = None,
     possible_fake: bool | None = None,
-    severity: str | None = None
+    severity: str | None = None,
+    object_count: int | None = None
 ):
-
-    print("\n==============================")
-    print("[DECISION AGENT]")
-    print("==============================")
-
-    print(f"Intent               : {intent}")
-    print(f"Disaster             : {disaster_type}")
-    print(f"Validation Score     : {validation_score}")
-    print(f"Flood Detected       : {flood_detected}")
-    print(f"Vision Confidence    : {vision_confidence}")
-    print(f"Possible Fake        : {possible_fake}")
-    print(f"Severity             : {severity}")
 
     if validation_score is None:
         validation_score = 0
@@ -46,6 +24,9 @@ def make_decision(
     if vision_confidence is None:
         vision_confidence = 0
 
+    if object_count is None:
+        object_count = 0
+    
     # bukan laporan
     if intent == "lainnya":
 
@@ -95,6 +76,15 @@ def make_decision(
             kategori_laporan="perlu tinjauan",
             reason="Objek banjir tidak terdeteksi pada gambar."
         )
+    
+    # banjir terdeteksi tetapi tidak ada objek referensi
+    if flood_detected is True and object_count == 0:
+        return DecisionOutput(
+            action="escalate",
+            eskalasi_posko=True,
+            kategori_laporan="perlu tinjauan",
+            reason="Banjir terdeteksi, namun tidak ada objek referensi untuk mengukur kedalaman. Eskalasi paksa ke posko untuk pengecekan manual."
+        )   
 
     # kondisi sangat meyakinkan
     if (
@@ -139,9 +129,10 @@ if __name__ == "__main__":
         disaster_type="banjir",
         validation_score=80,
         flood_detected=True,
-        vision_confidence=95,
+        vision_confidence=40,
         possible_fake=False,
-        severity="Tinggi"
+        severity="Tidak Dapat Dipastikan",
+        object_count=0
     )
 
     print(hasil.model_dump())

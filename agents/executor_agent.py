@@ -9,9 +9,7 @@ load_dotenv()
 # output
 class ExecutorOutput(BaseModel):
 
-    final_response: str = Field(
-        description="Pesan akhir yang dikirim kepada warga."
-    )
+    final_response: str = Field(description="Pesan akhir yang dikirim kepada warga.")
 
 # exeutor agent
 def execute_response(
@@ -23,15 +21,7 @@ def execute_response(
     context: str = "",
     chat_history: str = ""
 ):
-
-    print("\n==============================")
-    print("[EXECUTOR AGENT]")
-    print("==============================")
-
-    print(f"Intent     : {intent}")
-    print(f"Action     : {action}")
-    print(f"Kategori   : {kategori_laporan}")
-
+    # inisialisasi model
     llm = ChatGroq(
         model="llama-3.3-70b-versatile",
         temperature=0.2
@@ -43,85 +33,24 @@ def execute_response(
 
     system_prompt = """
         Kamu adalah Executor Agent pada sistem koordinasi bencana BPBD.
-
         Tugasmu BUKAN mengambil keputusan.
-
         Keputusan sistem sudah diberikan oleh Decision Agent.
-
         Tugasmu hanya menyusun balasan akhir yang natural,
         jelas,
         singkat,
         empatik,
         dan mudah dipahami masyarakat.
 
-        ==================================================
-
-        ATURAN
-
-        ==================================================
-
-        1.
-        JANGAN mengubah Action.
-
-        2.
-        JANGAN mengubah Kategori Laporan.
-
-        3.
-        Jika Action = reject
-
-        Jelaskan dengan sopan bahwa aplikasi hanya menangani
-        laporan dan informasi mengenai banjir.
-
-        Jangan memberikan SOP.
-
-        ==================================================
-
-        4.
-        Jika Action = respond
-        dan Intent = tanya_info
-
-        Jawab menggunakan Context.
-
-        Jika Context kosong,
-        katakan informasi belum tersedia.
-
-        ==================================================
-
-        5.
-        Jika Action = respond
-        dan Kategori = perlu tinjauan
-
-        Sampaikan bahwa laporan telah diterima,
-        namun masih memerlukan verifikasi operator BPBD.
-
-        Jangan mengatakan laporan telah diteruskan ke Posko.
-
-        ==================================================
-
-        6.
-        Jika Action = escalate
-
-        Sampaikan bahwa laporan telah diterima
-        dan telah diteruskan kepada Posko BPBD.
-
-        Berikan instruksi keselamatan awal
-        berdasarkan Context.
-
-        ==================================================
-
-        7.
-        Jangan membuat fakta baru.
-
-        Gunakan HANYA informasi pada Context.
-
-        ==================================================
-
-        8.
-        Gunakan bahasa Indonesia yang natural,
-        ramah,
-        dan profesional.
-
-        Jangan terlalu panjang.
+        [ATURAN]
+        1.JANGAN mengubah Action.
+        2.JANGAN mengubah Kategori Laporan.
+        3.Jika Action = reject, Jelaskan dengan sopan bahwa aplikasi hanya menangani laporan dan informasi mengenai banjir. Jangan memberikan SOP.
+        4.Jika Action = respond dan Intent = tanya_info, Jawab menggunakan Context. Jika Context kosong, katakan informasi belum tersedia.
+        5.Jika Action = respond dan Kategori = perlu tinjauan, Sampaikan bahwa laporan telah diterima namun masih memerlukan verifikasi operator BPBD. Jangan mengatakan laporan telah diteruskan ke Posko.
+        6.Jika Action = escalate, Sampaikan bahwa laporan telah diterima dan telah diteruskan kepada Posko BPBD. Berikan instruksi keselamatan awal berdasarkan Context.
+        7.Jangan membuat fakta baru. Gunakan HANYA informasi pada Context.
+        8.Gunakan bahasa Indonesia yang natural, ramah, dan profesional.
+        9.Jawaban jangan terlalu panjang.
         """
 
     prompt = ChatPromptTemplate.from_messages(
@@ -186,9 +115,7 @@ if __name__ == "__main__":
         reason="validation score tinggi",
         context="""
         Segera menuju tempat yang lebih tinggi.
-
         Matikan aliran listrik apabila masih aman dilakukan.
-
         Ikuti arahan petugas BPBD.
         """
     )
