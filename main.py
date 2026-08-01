@@ -75,6 +75,7 @@ class DashboardLaporan(BaseModel):
     pesan: str
     latitude: float
     longitude: float
+    alamat: Optional[str] = None
     image_path: Optional[str] = None
     vision_score: Optional[float] = None
     vision_result: Optional[str] = None
@@ -172,6 +173,7 @@ async def proses_laporan(
                 "pesan": payload.user_message,
                 "latitude": payload.lat,
                 "longitude": payload.lon,
+                "alamat_lengkap": hasil.get("alamat_lengkap"),
                 "image_path": payload.image_path,
                 "intent": hasil.get("intent", "lainnya"),
                 "disaster_type": hasil.get("disaster_type", "lainnya"),
@@ -227,6 +229,7 @@ def api_get_laporan(db: Session = Depends(get_db)):
                 pesan=item.pesan,
                 latitude=item.latitude,
                 longitude=item.longitude,
+                alamat=item.alamat or "Lokasi tidak diketahui",
                 image_path=item.image_path,
                 vision_score=item.vision.vision_score if item.vision else None,
                 vision_result=item.vision.vision_result if item.vision else None,
@@ -303,6 +306,7 @@ async def get_map_data(db: Session = Depends(get_db)):
                 "waktu": item.waktu.strftime("%d-%m-%Y %H:%M"),
                 "latitude": item.latitude,
                 "longitude": item.longitude,
+                "alamat": item.alamat or "Lokasi tidak diketahui",
                 "pesan": item.pesan,
                 "kategori": item.decision.kategori_laporan if item.decision else "bukan laporan",
                 "status": item.status

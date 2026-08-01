@@ -74,12 +74,15 @@ async function loadMarkers(){
         }
 
         // Tentukan warna marker
-        let icon = greyIcon;
+        let icon = greyIcon; // Default fallback
 
-        if(item.kategori === "insiden terverifikasi"){
+        if (item.status === "Selesai") {
+            icon = greyIcon;
+        } 
+        else if (item.kategori === "insiden terverifikasi") {
             icon = greenIcon;
         }   
-        else if(item.kategori === "perlu tinjauan"){
+        else if (item.kategori === "perlu tinjauan") {
             icon = yellowIcon;
         }
 
@@ -91,69 +94,54 @@ async function loadMarkers(){
             {
                 icon: icon
             }
-        )
-        .addTo(map)
-        .bindPopup(
-            `
-            <div style="min-width:240px">
+        ).addTo(map);
+        
+        // Popup langsung menggunakan item.alamat
+        const popupContent = `
+            <div style="min-width: 260px; font-family: 'Poppins', sans-serif;">
+                <!-- Header Popup -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
+                    <h6 style="margin: 0; font-weight: 600; color: #2c3e50;">
+                        📍 Laporan #${item.id}
+                    </h6>
+                    <span class="badge ${item.status === 'Selesai' ? 'bg-secondary' : (item.status === 'Diproses' ? 'bg-primary' : 'bg-warning text-dark')}">${item.status}</span>
+                </div>
+                
+                <!-- Pesan Warga -->
+                <p style="font-size: 13px; font-style: italic; color: #555; background: #f8f9fc; padding: 8px; border-radius: 5px; border-left: 3px solid #e57e25; margin-bottom: 12px;">
+                    "${item.pesan}"
+                </p>
 
-            <h6>
-            📍 Laporan #${item.id}
-            </h6>
-            
-            <hr>
+                <!-- Informasi Inti -->
+                <div style="font-size: 13px; color: #444; margin-bottom: 15px;">
+                    <div style="margin-bottom: 8px;">
+                        <i class="fa-regular fa-clock me-2 text-muted"></i> <b>Waktu:</b> ${item.waktu}
+                    </div>
+                    <div style="display: flex; align-items: flex-start;">
+                        <i class="fa-solid fa-map-location-dot me-2 text-muted" style="margin-top: 3px;"></i>
+                        <div>
+                            <b>Alamat:</b><br>
+                            <span style="color: #666; font-size: 11px; line-height: 1.3; display: inline-block; margin-top: 2px;">
+                                ${item.alamat}
+                            </span>
+                        </div>
+                    </div>
+                </div>
 
-            <p style="margin-bottom:8px;">
-            💬 ${item.pesan}
-            </p>
-            
-            <table class="table table-sm mb-2">
-            
-            <tr>
-            <td><b>Status</b></td>
-            <td>${item.status}</td>
-            </tr>
-
-            <tr>
-            <td><b>Kategori</b></td>
-            <td>${item.kategori}</td>
-            </tr>
-
-            <tr>
-            <td><b>Waktu</b></td>
-            <td>${item.waktu}</td>
-            </tr>
-
-            <tr>
-            <td><b>Latitude</b></td>
-            <td>${item.latitude}</td>
-            </tr>
-
-            <tr>
-            <td><b>Longitude</b></td>
-            <td>${item.longitude}</td>
-            </tr>
-
-            </table>
-
-            <div class="d-grid">
-
-            <a
-            class="btn btn-primary btn-sm"
-            href="http://127.0.0.1:5000/laporan/${item.id}">
-
-            Lihat Detail
-
-            </a>
-
+                <!-- Tombol Aksi -->
+                <div class="d-grid">
+                    <a class="btn btn-primary btn-sm rounded-2 shadow-sm fw-bold" href="/laporan/${item.id}">
+                        Lihat Detail
+                    </a>
+                </div>
             </div>
+        `;
 
-            </div>
-            `
-        );
+        marker.bindPopup(popupContent);
+
         markers.push({
-        marker: marker,
-        data: item
+            marker: marker,
+            data: item
         });
     });
 

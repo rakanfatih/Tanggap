@@ -12,6 +12,9 @@
 <body>
 
 <div class="app-wrapper">
+    <!-- Overlay Transparan untuk Mobile -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
     <!-- SIDEBAR -->
     <aside class="sidebar">
         <div class="sidebar-logo">
@@ -28,6 +31,11 @@
     <!-- MAIN CONTENT -->
     <main class="main-content">
         <header class="top-header">
+            <!-- Tombol Hamburger untuk Mobile -->
+            <div class="mobile-toggle" onclick="toggleSidebar()">
+                <i class="fa-solid fa-bars"></i>
+            </div>
+
             <i class="fa-solid fa-circle-user profile-icon"></i>
         </header>
 
@@ -126,7 +134,6 @@
         }
     });
 
-    
     new Chart(document.getElementById('trendChart'), {
         type: 'line',
         data: {
@@ -188,6 +195,14 @@
         },
         options: { responsive: true, maintainAspectRatio: false }
     });
+</script>
+
+<!-- SCRIPT UNTUK TOGGLE SIDEBAR MOBILE -->
+<script>
+    function toggleSidebar() {
+        document.querySelector('.sidebar').classList.toggle('active');
+        document.querySelector('.sidebar-overlay').classList.toggle('active');
+    }
 </script>
 </body>
 </html>

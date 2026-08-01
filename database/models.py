@@ -14,6 +14,7 @@ class Laporan(Base):
     pesan = Column(String)
     latitude = Column(Float)
     longitude = Column(Float)
+    alamat = Column(String, nullable=True, default="Lokasi tidak diketahui")
     image_path = Column(String, nullable=True)
     status = Column(String, default="Menunggu")
 

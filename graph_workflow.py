@@ -27,9 +27,10 @@ class GraphState(TypedDict):
     validation_score: Optional[int]
     gps_valid: Optional[bool]
     alamat_lengkap: Optional[str]
-    kondisi_cuaca: Optional[str]
     suhu: Optional[float]
-    is_hujan: Optional[bool]
+    kategori_hujan: Optional[str]
+    curah_hujan_mm: Optional[float]
+    poin_cuaca: Optional[int]
 
     # vision
     flood_detected: Optional[bool]
@@ -109,7 +110,7 @@ def node_validator(state: GraphState):
     print("OUTPUT VALIDATOR AGENT:")
     print(f"   - Alamat Lengkap: {hasil['alamat_lengkap']}")
     print(f"   - GPS Valid     : {hasil['gps_valid']}")
-    print(f"   - Cuaca         : {hasil['kondisi_cuaca']} (Hujan: {hasil['is_hujan']})")
+    print(f"   - Cuaca         : {hasil['kategori_hujan']} ({hasil['curah_hujan_mm']} mm)")
     print(f"   - Val. Score    : {hasil['validation_score']}")
     print(f"    Latensi Node  : {latensi:.2f} detik")
     print("=" * 50)
@@ -118,9 +119,10 @@ def node_validator(state: GraphState):
         "validation_score": hasil["validation_score"],
         "gps_valid": hasil["gps_valid"],
         "alamat_lengkap": hasil["alamat_lengkap"],
-        "kondisi_cuaca": hasil["kondisi_cuaca"],
         "suhu": hasil["suhu"],
-        "is_hujan": hasil["is_hujan"]
+        "kategori_hujan": hasil["kategori_hujan"],
+        "curah_hujan_mm": hasil["curah_hujan_mm"],
+        "poin_cuaca": hasil["poin_cuaca"]
     }
 
 # vision node

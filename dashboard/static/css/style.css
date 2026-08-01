@@ -226,3 +226,80 @@ body {
     border-radius: 20px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.05);
 }
+
+/* =========================================
+   MOBILE RESPONSIVENESS
+========================================= */
+
+/* Tombol Hamburger (Default disembunyikan di PC) */
+.mobile-toggle {
+    display: none;
+    font-size: 24px;
+    color: #333;
+    cursor: pointer;
+    margin-right: auto; /* Mendorong ikon profil ke kanan */
+}
+
+/* Overlay gelap saat sidebar terbuka di mobile */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+}
+
+.sidebar-overlay.active {
+    display: block;
+}
+
+/* Aturan untuk Layar Tablet & Mobile (di bawah 992px) */
+@media (max-width: 992px) {
+    .stats-container {
+        grid-template-columns: repeat(2, 1fr); /* Menjadi 2 kolom */
+    }
+    .dashboard-grid {
+        grid-template-columns: 1fr; /* Peta & Laporan ditumpuk ke bawah */
+    }
+    .charts-container {
+        grid-template-columns: 1fr; /* Grafik ditumpuk ke bawah */
+    }
+}
+
+/* Aturan Khusus Layar Smartphone (di bawah 768px) */
+@media (max-width: 768px) {
+    .app-wrapper {
+        position: relative;
+    }
+    
+    /* Sidebar disembunyikan ke kiri */
+    .sidebar {
+        position: fixed;
+        left: -260px;
+        top: 0;
+        bottom: 0;
+        z-index: 1000;
+        transition: left 0.3s ease;
+    }
+    
+    /* Class untuk memunculkan sidebar */
+    .sidebar.active {
+        left: 0;
+    }
+    
+    .mobile-toggle {
+        display: block; /* Munculkan tombol hamburger */
+    }
+
+    .main-content {
+        padding: 15px; /* Kurangi padding agar lebih lega di HP */
+    }
+
+    .stats-container {
+        grid-template-columns: 1fr; /* Kartu statistik jadi 1 baris ke bawah */
+    }
+    
+    .top-header {
+        padding: 10px 0 20px 0;
+    }
+}

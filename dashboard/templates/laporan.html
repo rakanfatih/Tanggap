@@ -6,15 +6,19 @@
     <title>Daftar Laporan - BPBD Tanggap</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- TAMBAHAN: DataTables CSS -->
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     
-    <!-- DITAMBAHKAN: Library SheetJS untuk Export Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-0.18.5/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
 <div class="app-wrapper">
+    <!-- Overlay Transparan untuk Mobile -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
     <!-- SIDEBAR -->
     <aside class="sidebar">
         <div class="sidebar-logo">
@@ -31,6 +35,10 @@
     <!-- MAIN CONTENT -->
     <main class="main-content">
         <header class="top-header">
+            <!-- Tombol Hamburger untuk Mobile -->
+            <div class="mobile-toggle" onclick="toggleSidebar()">
+                <i class="fa-solid fa-bars"></i>
+            </div>
             <i class="fa-solid fa-circle-user profile-icon"></i>
         </header>
 
@@ -64,7 +72,6 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h5 class="m-0 fw-bold text-gray-800"><i class="fa-solid fa-list text-primary me-2"></i>Daftar Lengkap Laporan</h5>
                 
-                <!-- DITAMBAHKAN: Tombol Download Excel -->
                 <button onclick="downloadExcel()" class="btn btn-success btn-sm shadow-sm fw-bold">
                     <i class="fa-solid fa-file-excel me-2"></i>Download Excel
                 </button>
@@ -75,11 +82,11 @@
                 <div class="col-md-6">
                     <div class="input-group">
                         <span class="input-group-text bg-white text-muted border-end-0"><i class="fa-solid fa-magnifying-glass"></i></span>
-                        <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Cari ID, status, atau kategori...">
+                        <input type="text" id="customSearchInput" class="form-control border-start-0" placeholder="Cari ID, status, atau kategori...">
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <select id="statusFilter" class="form-select text-secondary">
+                    <select id="customStatusFilter" class="form-select text-secondary">
                         <option value="">Semua Status</option>
                         <option value="Menunggu">Menunggu</option>
                         <option value="Diproses">Diproses</option>
@@ -87,7 +94,7 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <select id="kategoriFilter" class="form-select text-secondary">
+                    <select id="customKategoriFilter" class="form-select text-secondary">
                         <option value="">Semua Kategori</option>
                         <option value="insiden terverifikasi">Insiden Terverifikasi</option>
                         <option value="perlu tinjauan">Perlu Tinjauan</option>
@@ -98,7 +105,7 @@
 
             <!-- Tabel Data -->
             <div class="table-responsive">
-                <table class="table table-hover align-middle border">
+                <table id="laporanDataTable" class="table table-hover align-middle border" style="width:100%">
                     <thead class="table-light text-muted">
                         <tr>
                             <th class="text-center" width="5%">ID</th>
@@ -108,12 +115,13 @@
                             <th class="text-center" width="10%">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody id="laporanTable">
+                    <tbody>
                     {% for item in laporan %}
-                        <tr class="laporan-row" data-id="{{ item.id }}" data-pesan="{{ item.pesan|lower }}" data-status="{{ item.status|lower }}" data-kategori="{{ item.kategori_laporan|lower }}">
+                        <tr>
                             <td class="text-center fw-bold text-primary">#{{ item.id }}</td>
-                            <td class="text-secondary"><i class="fa-regular fa-calendar me-2"></i>{{ item.waktu }}</td>
-                            <td>
+                            <td class="text-secondary" data-order="{{ item.waktu }}"><i class="fa-regular fa-calendar me-2"></i>{{ item.waktu }}</td>
+                            
+                            <td data-search="{{ item.status }}">
                                 <form action="/update-status/{{ item.id }}" method="POST" class="m-0">
                                     <select name="status" class="form-select form-select-sm shadow-none {% if item.status == 'Selesai' %}border-success text-success fw-bold{% elif item.status == 'Diproses' %}border-primary text-primary fw-bold{% else %}border-warning text-dark fw-bold{% endif %}" onchange="this.form.submit()">
                                         <option value="Menunggu" {% if item.status=="Menunggu" %}selected{% endif %}>Menunggu</option>
@@ -122,7 +130,8 @@
                                     </select>
                                 </form>
                             </td>
-                            <td>
+                            
+                            <td data-search="{{ item.kategori_laporan }}">
                                 {% if item.kategori_laporan == "insiden terverifikasi" %}
                                     <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-2 rounded-pill"><i class="fa-solid fa-circle-check me-1"></i> Terverifikasi</span>
                                 {% elif item.kategori_laporan == "perlu tinjauan" %}
@@ -142,42 +151,68 @@
                 </table>
             </div>
         </div>
-
     </main>
 </div>
 
 <!-- TOAST NOTIFICATION -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3">
-    <div id="laporanToast" class="toast align-items-center text-bg-warning border-0" role="alert" data-bs-delay="3000">
+    <div id="laporanToast" class="toast align-items-center text-bg-warning border-0" role="alert">
         <div class="d-flex">
-            <div class="toast-body fw-bold" id="toastBody"><i class="fa-solid fa-bell me-2"></i> Ada laporan baru.</div>
+            <div class="toast-body fw-bold" id="toastBody">
+                <!-- Akan diisi otomatis oleh JS -->
+            </div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
     </div>
 </div>
 
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="{{ url_for('static', filename='js/search.js') }}"></script>
-<script src="{{ url_for('static', filename='js/filter.js') }}"></script>
-<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
-<!-- FUNGSI KLIK CARD REKAPITULASI -->
+<!-- INISIALISASI DATATABLES & FILTER -->
 <script>
-function filterDariCard(statusValue) {
-    const statusDropdown = document.getElementById('statusFilter');
-    statusDropdown.value = statusValue;
-    
-    document.getElementById('searchInput').value = '';
-    document.getElementById('kategoriFilter').value = '';
-    
-    const event = new Event('change');
-    statusDropdown.dispatchEvent(event);
-    
-    document.querySelector('.table-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
+$(document).ready(function() {
+    var table = $('#laporanDataTable').DataTable({
+        "pageLength": 10,
+        "lengthMenu": [10, 25, 50, 100],
+        "order": [[1, "desc"]], 
+        "dom": '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>', 
+        "language": {
+            "emptyTable": "Tidak ada laporan yang tersedia",
+            "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ laporan",
+            "infoEmpty": "Menampilkan 0 laporan",
+            "paginate": {
+                "next": "Selanjutnya",
+                "previous": "Sebelumnya"
+            }
+        }
+    });
+
+    $('#customSearchInput').on('keyup', function() {
+        table.search(this.value).draw();
+    });
+
+    $('#customStatusFilter').on('change', function() {
+        table.column(2).search(this.value).draw();
+    });
+
+    $('#customKategoriFilter').on('change', function() {
+        table.column(3).search(this.value).draw();
+    });
+
+    window.filterDariCard = function(statusValue) {
+        $('#customStatusFilter').val(statusValue).trigger('change');
+        $('#customSearchInput').val('').trigger('keyup');
+        $('#customKategoriFilter').val('').trigger('change');
+        document.querySelector('.table-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+});
 </script>
 
-<!-- REAL-TIME POLLING AUTO REFRESH -->
+<!-- REAL-TIME POLLING AUTO REFRESH (SOFT-REFRESH) -->
 <script>
 let lastId = {{ laporan[0]["id"] if laporan else 0 }};
 async function cekLaporanBaru(){
@@ -186,36 +221,43 @@ async function cekLaporanBaru(){
         if(!response.ok) return;
         
         const rawData = await response.json();
-        // FILTER: Abaikan laporan yang eskalasi_posko false
         const data = rawData.filter(item => item.eskalasi_posko === true);
         
         if(data.length === 0) return;
         
-        if(data[0].id > lastId){
+        const laporanBaru = data.filter(item => item.id > lastId);
+        
+        if(laporanBaru.length > 0){
             lastId = data[0].id;
-            document.getElementById("toastBody").textContent = "🔔 Laporan Baru: ID " + data[0].id;
-            const toast = new bootstrap.Toast(document.getElementById("laporanToast"));
+            
+            const toastBody = document.getElementById("toastBody");
+            toastBody.innerHTML = `
+                <div class="d-flex align-items-center justify-content-between w-100">
+                    <span class="fw-bold"><i class="fa-solid fa-bell me-2"></i> Ada ${laporanBaru.length} laporan baru!</span>
+                    <button class="btn btn-sm btn-dark fw-bold ms-3" onclick="location.reload()">
+                        <i class="fa-solid fa-rotate me-1"></i> Muat
+                    </button>
+                </div>
+            `;
+            
+            const toastElement = document.getElementById("laporanToast");
+            const toast = new bootstrap.Toast(toastElement, { autohide: false });
             toast.show();
-            setTimeout(() => location.reload(), 1500);
         }
     } catch(error){ console.log("Tidak dapat menghubungi API.", error); }
 }
 setInterval(cekLaporanBaru, 5000);
 </script>
 
-<!-- DITAMBAHKAN: FUNGSI DOWNLOAD EXCEL -->
+<!-- FUNGSI DOWNLOAD EXCEL -->
 <script>
 function downloadExcel() {
-    // 1. Ambil data mentah laporan dari template Jinja2 dan convert ke JS Object
     const rawData = {{ laporan | tojson | safe }};
-    
-    // 2. Format dan bersihkan data untuk Excel
     const excelData = rawData.map(item => {
         let keparahan = "-";
         let kedalaman = "-";
         let objek = "-";
         
-        // Coba ekstrak data Vision Agent jika ada
         if (item.vision_result) {
             try {
                 const vision = JSON.parse(item.vision_result);
@@ -240,22 +282,27 @@ function downloadExcel() {
         };
     });
 
-    // 3. Buat file Excel dari array objek JS
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Bencana");
     
-    // 4. (Opsional) Atur lebar kolom agar rapi saat dibuka di Excel
     const wscols = [
         {wch: 12}, {wch: 18}, {wch: 40}, {wch: 12}, {wch: 12}, 
         {wch: 25}, {wch: 18}, {wch: 18}, {wch: 30}, {wch: 18}, {wch: 50}
     ];
     worksheet['!cols'] = wscols;
 
-    // 5. Trigger download file
     const date = new Date().toISOString().split('T')[0];
     XLSX.writeFile(workbook, `Rekapitulasi_Laporan_Banjir_${date}.xlsx`);
 }
+</script>
+
+<!-- SCRIPT UNTUK TOGGLE SIDEBAR MOBILE -->
+<script>
+    function toggleSidebar() {
+        document.querySelector('.sidebar').classList.toggle('active');
+        document.querySelector('.sidebar-overlay').classList.toggle('active');
+    }
 </script>
 </body>
 </html>

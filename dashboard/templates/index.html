@@ -14,6 +14,9 @@
 <body>
 
 <div class="app-wrapper">
+    <!-- Overlay Transparan untuk Mobile -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
     <!-- SIDEBAR -->
     <aside class="sidebar">
         <div class="sidebar-logo">
@@ -31,6 +34,11 @@
     <main class="main-content">
         
         <header class="top-header">
+            <!-- Tombol Hamburger untuk Mobile -->
+            <div class="mobile-toggle" onclick="toggleSidebar()">
+                <i class="fa-solid fa-bars"></i>
+            </div>
+            
             <i class="fa-solid fa-circle-user profile-icon"></i>
         </header>
 
@@ -63,18 +71,26 @@
             
             <div class="recent-reports">
                 <h5>Laporan Terbaru</h5>
-                {% for item in laporan[:5] %}
-                <!-- Klik untuk geser peta -->
-                <div class="report-item" style="cursor: pointer;" onclick="focusMap({{ item.latitude }}, {{ item.longitude }}, {{ item.id }})">
-                    <div class="report-info">
-                        <h6>Laporan #{{ item.id }}</h6>
-                        <p>{{ item.pesan }}</p>
+                {% if laporan %}
+                    {% for item in laporan[:5] %}
+                    <!-- Klik untuk geser peta -->
+                    <div class="report-item" style="cursor: pointer;" onclick="focusMap({{ item.latitude }}, {{ item.longitude }}, {{ item.id }})">
+                        <div class="report-info">
+                            <h6>Laporan #{{ item.id }}</h6>
+                            <p>{{ item.pesan }}</p>
+                        </div>
+                        <div class="report-action">
+                            <a href="/laporan/{{ item.id }}" onclick="event.stopPropagation();"><i class="fa-solid fa-share"></i></a>
+                        </div>
                     </div>
-                    <div class="report-action">
-                        <a href="/laporan/{{ item.id }}" onclick="event.stopPropagation();"><i class="fa-solid fa-share"></i></a>
+                    {% endfor %}
+                {% else %}
+                    <!-- Status Kosong (Empty State) -->
+                    <div class="text-center py-4 text-muted">
+                        <i class="fa-solid fa-clipboard-check fa-3x mb-3 text-success opacity-50"></i>
+                        <p class="mb-0">Situasi aman.<br>Belum ada laporan terbaru.</p>
                     </div>
-                </div>
-                {% endfor %}
+                {% endif %}
             </div>
         </div>
 
@@ -112,7 +128,6 @@
 
 <!-- CHART.JS CONFIG -->
 <script>
-    // Konfigurasi Bar Chart Horizontal
     const ctxBar = document.getElementById('barChart').getContext('2d');
     new Chart(ctxBar, {
         type: 'bar',
@@ -137,7 +152,6 @@
         }
     });
 
-    // Konfigurasi Donut Chart
     const ctxDonut = document.getElementById('donutChart').getContext('2d');
     new Chart(ctxDonut, {
         type: 'doughnut',
@@ -158,29 +172,44 @@
     });
 </script>
 
-<!-- REAL-TIME POLLING -->
+<!-- REAL-TIME POLLING (INTERACTIVE SOFT-REFRESH) -->
 <script>
 let lastId = {{ laporan[0]["id"] if laporan else 0 }};
-async function cekLaporanBaru(){
-    try{
-        const response = await fetch("{{ api_base}}/api/laporan");
-        if(!response.ok) return;
+
+async function cekLaporanBaru() {
+    try {
+        const response = await fetch("{{ api_base }}/api/laporan");
+        if (!response.ok) return;
         
         const rawData = await response.json();
-        // FILTER: Abaikan laporan yang eskalasi_posko false
         const data = rawData.filter(item => item.eskalasi_posko === true);
         
-        if(data.length === 0) return;
+        if (data.length === 0) return;
         
-        if(data[0].id > lastId){
+        const laporanBaru = data.filter(item => item.id > lastId);
+        
+        if (laporanBaru.length > 0) {
             lastId = data[0].id;
-            document.getElementById("toastBody").textContent = "🔔 Laporan Baru: " + data[0].pesan;
-            const toast = new bootstrap.Toast(document.getElementById("laporanToast"));
+            
+            const toastBody = document.getElementById("toastBody");
+            toastBody.innerHTML = `
+                <div class="d-flex align-items-center justify-content-between w-100">
+                    <span class="fw-bold"><i class="fa-solid fa-bell me-2"></i> Ada ${laporanBaru.length} laporan baru!</span>
+                    <button class="btn btn-sm btn-dark fw-bold ms-3" onclick="location.reload()">
+                        <i class="fa-solid fa-rotate me-1"></i> Muat
+                    </button>
+                </div>
+            `;
+            
+            const toastElement = document.getElementById("laporanToast");
+            const toast = new bootstrap.Toast(toastElement, { autohide: false });
             toast.show();
-            setTimeout(() => location.reload(), 1500);
         }
-    } catch(error){ console.log("Tidak dapat menghubungi API.", error); }
+    } catch (error) { 
+        console.log("Tidak dapat menghubungi API.", error); 
+    }
 }
+
 setInterval(cekLaporanBaru, 5000);
 </script>
 
@@ -195,6 +224,14 @@ setInterval(cekLaporanBaru, 5000);
             const markerObj = markers.find(m => m.data.id === id);
             if (markerObj) markerObj.marker.openPopup();
         }
+    }
+</script>
+
+<!-- SCRIPT UNTUK TOGGLE SIDEBAR MOBILE -->
+<script>
+    function toggleSidebar() {
+        document.querySelector('.sidebar').classList.toggle('active');
+        document.querySelector('.sidebar-overlay').classList.toggle('active');
     }
 </script>
 

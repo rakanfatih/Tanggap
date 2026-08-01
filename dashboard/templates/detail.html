@@ -10,8 +10,27 @@
         .card-header { background-color: #fff; font-weight: bold; border-bottom: 2px solid #eaecf4; }
         .info-label { font-size: 0.85rem; color: #858796; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;}
         .info-value { font-size: 1.1rem; color: #3a3b45; font-weight: 500; margin-bottom: 15px;}
-        .img-container { position: relative; width: 100%; background: #000; border-radius: 8px; overflow: hidden; }
-        .img-container img { width: 100%; height: auto; display: block; }
+        
+        /* Perbaikan Proporsi Foto */
+        .img-container { 
+            position: relative; 
+            width: 100%; 
+            background: #f8f9fc; /* Latar belakang abu-abu terang */
+            border-radius: 8px; 
+            overflow: hidden; 
+            text-align: center;
+        }
+        .img-container img { 
+            width: 100%; 
+            max-height: 400px; /* Batasi tinggi maksimal agar tidak raksasa */
+            object-fit: contain; /* Jaga rasio asli foto tanpa terpotong */
+            display: block; 
+            cursor: zoom-in; /* Kursor berubah jadi kaca pembesar */
+            transition: transform 0.2s ease;
+        }
+        .img-container img:hover {
+            transform: scale(1.02); /* Efek sedikit membesar saat disorot mouse */
+        }
     </style>
 </head>
 <body>
@@ -112,8 +131,10 @@
                             <div class="info-label mb-3">Foto Asli Pelapor</div>
                             {% if laporan.image_path %}
                                 <div class="img-container shadow-sm border">
-                                    <img src="{{ api_base }}/{{ laporan.image_path }}" alt="Foto Laporan">
+                                    <!-- Tambahkan event onclick untuk memicu lightbox -->
+                                    <img src="{{ api_base }}/{{ laporan.image_path }}" alt="Foto Laporan" onclick="openLightbox(this.src)">
                                 </div>
+                                <small class="text-muted mt-2 d-block"><i class="fa-solid fa-magnifying-glass-plus"></i> Klik foto untuk memperbesar</small>
                             {% else %}
                                 <div class="p-5 bg-light border rounded text-muted">Tidak ada foto terlampir.</div>
                             {% endif %}
@@ -125,6 +146,29 @@
     </div>
 </div>
 
+<!-- Modal Lightbox Bootstrap -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content bg-transparent border-0">
+            <div class="modal-header border-0 pb-0 justify-content-end">
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="filter: invert(1) grayscale(100%) brightness(200%);"></button>
+            </div>
+            <div class="modal-body text-center pt-0">
+                <img src="" id="lightboxImage" class="img-fluid rounded shadow-lg" alt="Zoomed Foto">
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Script untuk mengontrol Lightbox -->
+<script>
+    function openLightbox(imageSrc) {
+        document.getElementById('lightboxImage').src = imageSrc;
+        var myModal = new bootstrap.Modal(document.getElementById('imageModal'));
+        myModal.show();
+    }
+</script>
 </body>
 </html>

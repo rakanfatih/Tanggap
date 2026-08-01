@@ -13,6 +13,7 @@ def simpan_laporan(
         pesan=data["pesan"],
         latitude=data["latitude"],
         longitude=data["longitude"],
+        alamat=data.get("alamat_lengkap"),
         image_path=data.get("image_path"),
         status=status_awal
     )
