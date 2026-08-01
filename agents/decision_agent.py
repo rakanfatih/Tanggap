@@ -71,10 +71,10 @@ def make_decision(
     if flood_detected is False:
 
         return DecisionOutput(
-            action="respond",
+            action="reject",
             eskalasi_posko=False,
-            kategori_laporan="perlu tinjauan",
-            reason="Objek banjir tidak terdeteksi pada gambar."
+            kategori_laporan="bukan laporan",
+            reason="Laporan ditolak karena objek banjir sama sekali tidak terdeteksi pada gambar."
         )
     
     # banjir terdeteksi tetapi tidak ada objek referensi
@@ -89,8 +89,8 @@ def make_decision(
     # kondisi sangat meyakinkan
     if (
         validation_score >= 60
-        and vision_confidence >= 80
-        and severity == "Tinggi"
+        and vision_confidence >= 0.80
+        and severity in ["Tinggi", "Sedang"]
     ):
 
         return DecisionOutput(
@@ -103,7 +103,7 @@ def make_decision(
     # cukup yakin
     if (
         validation_score >= 40
-        and vision_confidence >= 60
+        and vision_confidence >= 0.60
     ):
 
         return DecisionOutput(
