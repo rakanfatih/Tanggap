@@ -106,31 +106,16 @@
             <div class="card shadow-sm mb-4">
                 <div class="card-header py-3"><i class="fa-solid fa-images text-warning"></i> Bukti Visual</div>
                 <div class="card-body">
-                    <div class="row">
-                        <!-- Foto Asli -->
-                        <div class="col-md-6 text-center">
-                            <div class="info-label mb-2">Foto Asli Pelapor</div>
+                    <div class="row justify-content-center">
+                        <!-- foto -->
+                        <div class="col-md-8 text-center">
+                            <div class="info-label mb-3">Foto Asli Pelapor</div>
                             {% if laporan.image_path %}
-                                <div class="img-container shadow-sm">
+                                <div class="img-container shadow-sm border">
                                     <img src="{{ api_base }}/{{ laporan.image_path }}" alt="Foto Laporan">
                                 </div>
                             {% else %}
                                 <div class="p-5 bg-light border rounded text-muted">Tidak ada foto terlampir.</div>
-                            {% endif %}
-                        </div>
-                        
-                        <!-- Foto Hasil Analisis (Bounding Box/Mask) -->
-                        <div class="col-md-6 text-center mt-3 mt-md-0">
-                            <div class="info-label mb-2">Hasil Segmentasi AI</div>
-                            {% if laporan.vision_image_path %}
-                                <div class="img-container shadow-sm border border-success">
-                                    <img src="{{ api_base }}/{{ laporan.vision_image_path }}" alt="Foto Analisis AI">
-                                </div>
-                            {% else %}
-                                <div class="p-5 bg-light border rounded text-muted d-flex flex-column justify-content-center align-items-center h-100">
-                                    <i class="fa-solid fa-image-slash fa-2x mb-2"></i>
-                                    <div>Foto analisis belum/tidak digenerate oleh AI.</div>
-                                </div>
                             {% endif %}
                         </div>
                     </div>

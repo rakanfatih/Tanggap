@@ -24,7 +24,7 @@ def index():
     try:
         response = requests.get(f"{API_URL}/laporan")
         if response.status_code == 200:
-            laporan = response.json()
+            laporan = [item for item in response.json() if item.get("eskalasi_posko") == True]
         else:
             laporan = []
     except requests.exceptions.RequestException:
@@ -78,7 +78,10 @@ def index():
 def daftar_laporan():
     try:
         response = requests.get(f"{API_URL}/laporan")
-        laporan = response.json() if response.status_code == 200 else []
+        if response.status_code == 200:
+            laporan = [item for item in response.json() if item.get("eskalasi_posko") == True]
+        else:
+            laporan = []
     except requests.exceptions.RequestException:
         laporan = []
 
@@ -138,7 +141,10 @@ def update_status_laporan(laporan_id):
 def analysis():
     try:
         response = requests.get(f"{API_URL}/laporan")
-        laporan = response.json() if response.status_code == 200 else []
+        if response.status_code == 200:
+            laporan = [item for item in response.json() if item.get("eskalasi_posko") == True]
+        else:
+            laporan = []
     except requests.exceptions.RequestException:
         laporan = []
         

@@ -184,7 +184,11 @@ async function cekLaporanBaru(){
     try{
         const response = await fetch("{{ api_base}}/api/laporan");
         if(!response.ok) return;
-        const data = await response.json();
+        
+        const rawData = await response.json();
+        // FILTER: Abaikan laporan yang eskalasi_posko false
+        const data = rawData.filter(item => item.eskalasi_posko === true);
+        
         if(data.length === 0) return;
         
         if(data[0].id > lastId){

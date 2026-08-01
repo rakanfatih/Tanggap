@@ -3,21 +3,25 @@ import uuid
 import shutil
 import uvicorn
 import time
+import json
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
 from typing import Optional
-from graph_workflow import app as langgraph_app
-from sqlalchemy.orm import Session
-from fastapi import Depends
-from database.database import get_db
-from database.crud import simpan_laporan, get_all_laporan, get_laporan_by_id, update_status, get_chat_history
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi import UploadFile, File
-import json
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from graph_workflow import app as langgraph_app
+from database.database import get_db
+from database.crud import simpan_laporan, get_all_laporan, get_laporan_by_id, update_status, get_chat_history
 
 load_dotenv(override=True)
+
+# batasi IP address
+limiter = Limiter(key_func=get_remote_address)
 
 # FastAPI  
 app = FastAPI(
@@ -26,16 +30,12 @@ app = FastAPI(
     version="2.0"
 )
 
-app.mount(
-    "/uploads",
-    StaticFiles(directory="uploads"),
-    name="uploads"
-)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-DASHBOARD_URL = os.getenv(
-    "DASHBOARD_URL",
-    "http://127.0.0.1:5000"
-    )
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+DASHBOARD_URL = os.getenv("DASHBOARD_URL", "http://127.0.0.1:5000")
 
 app.add_middleware(
     CORSMiddleware,
@@ -51,35 +51,14 @@ app.add_middleware(
 
 # request model 
 class LaporanRequest(BaseModel):
-
-    session_id: str = Field(
-        default="default_session", 
-        description="ID unik untuk setiap user/perangkat"
-    )
-
-    user_message: str = Field(
-        ...,
-        description="Pesan yang dikirim warga."
-    )
-
-    lat: Optional[float] = Field(
-        default=0.0,
-        description="Latitude GPS."
-    )
-
-    lon: Optional[float] = Field(
-        default=0.0,
-        description="Longitude GPS."
-    )
-
-    image_path: Optional[str] = Field(
-        default=None,
-        description="Path gambar."
-    )
+    session_id: str = Field(default="default_session", description="ID unik untuk setiap user/perangkat")
+    user_message: str = Field(..., description="Pesan yang dikirim warga.")
+    lat: Optional[float] = Field(default=0.0, description="Latitude GPS.")
+    lon: Optional[float] = Field(default=0.0, description="Longitude GPS.")
+    image_path: Optional[str] = Field(default=None, description="Path gambar.")
 
 # response model
 class LaporanResponse(BaseModel):
-
     intent: str
     disaster_type: str
     confidence: float
@@ -91,7 +70,6 @@ class LaporanResponse(BaseModel):
 
 # dashboard model
 class DashboardLaporan(BaseModel):
-
     id: int
     waktu: str
     pesan: str
@@ -116,11 +94,10 @@ class UpdateStatusRequest(BaseModel):
     status: str
 
 # endpoint
-@app.post(
-    "/api/lapor",
-    response_model=LaporanResponse
-)
+@app.post("/api/lapor", response_model=LaporanResponse)
+@limiter.limit("5/minute")
 async def proses_laporan(
+    request: Request,
     payload: LaporanRequest,
     db: Session = Depends(get_db)
 ):
@@ -135,7 +112,6 @@ async def proses_laporan(
     print(f"Image      : {payload.image_path}")
 
     try:
-
         riwayat = get_chat_history(db, payload.session_id)
 
         input_state = {
@@ -147,11 +123,7 @@ async def proses_laporan(
         }
 
         start_time = time.time()
-
-        hasil = langgraph_app.invoke(
-            input_state
-        )
-
+        hasil = langgraph_app.invoke(input_state)
         end_time = time.time()
         latensi = round(end_time - start_time, 2)
 
@@ -167,6 +139,22 @@ async def proses_laporan(
         
         print("=================================\n")
 
+        intent_terdeteksi = hasil.get("intent", "lainnya") 
+        kategori_terdeteksi = hasil.get("kategori_laporan", "bukan laporan")
+
+        if intent_terdeteksi != "lapor_darurat" or kategori_terdeteksi == "bukan laporan":
+            print(f"[INFO] intent adalah '{intent_terdeteksi}'. Kategori: {kategori_terdeteksi}). lewati penyimpanan ke database laporan.")
+            return LaporanResponse(
+                intent=intent_terdeteksi,
+                disaster_type=hasil.get("disaster_type", "lainnya"),
+                confidence=hasil.get("confidence", 0.0),
+                action=hasil.get("action", "reject"),
+                final_response=hasil.get("final_response", "Terjadi kesalahan."),
+                eskalasi_posko=False,
+                kategori_laporan=hasil.get("kategori_laporan", "bukan laporan"),
+                processing_time=latensi
+            )
+
         objek_terdeteksi = hasil.get("visible_objects", [])
         vision_detail = {
             "severity": hasil.get("severity", "-"),
@@ -175,9 +163,6 @@ async def proses_laporan(
             "objects": ", ".join(objek_terdeteksi) if objek_terdeteksi else "Tidak ada",
             "reason": hasil.get("vision_reason", "")
         }
-
-        # simpan to database
-        print("\n[MENYIMPAN KE DATABASE]")
 
         simpan_laporan(
             db=db,
@@ -224,14 +209,8 @@ async def proses_laporan(
             detail=str(e)
         )
 
-@app.get(
-    "/api/laporan",
-    response_model=list[DashboardLaporan]
-)
-def api_get_laporan(
-    db: Session = Depends(get_db)
-):
-
+@app.get("/api/laporan", response_model=list[DashboardLaporan])
+def api_get_laporan(db: Session = Depends(get_db)):
     laporan = get_all_laporan(db)
     hasil = []
 
@@ -267,25 +246,12 @@ def api_get_laporan(
     return hasil
 
 
-@app.get(
-    "/api/laporan/{laporan_id}",
-    response_model=DashboardLaporan
-)
-def api_get_laporan_by_id(
-    laporan_id: int,
-    db: Session = Depends(get_db)
-):
-
-    item = get_laporan_by_id(
-        db,
-        laporan_id
-    )
+@app.get("/api/laporan/{laporan_id}", response_model=DashboardLaporan)
+def api_get_laporan_by_id(laporan_id: int, db: Session = Depends(get_db)):
+    item = get_laporan_by_id(db, laporan_id)
 
     if item is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Laporan tidak ditemukan."
-        )
+        raise HTTPException(status_code=404, detail="Laporan tidak ditemukan.")
 
     return DashboardLaporan(
         id=item.id,
@@ -309,23 +275,11 @@ def api_get_laporan_by_id(
     )
 
 @app.put("/api/laporan/{laporan_id}/status")
-def api_update_status(
-    laporan_id: int,
-    payload: UpdateStatusRequest,
-    db: Session = Depends(get_db)
-):
-
-    laporan = update_status(
-        db,
-        laporan_id,
-        payload.status
-    )
+def api_update_status(laporan_id: int, payload: UpdateStatusRequest, db: Session = Depends(get_db)):
+    laporan = update_status(db, laporan_id, payload.status)
 
     if laporan is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Laporan tidak ditemukan."
-        )
+        raise HTTPException(status_code=404, detail="Laporan tidak ditemukan.")
 
     return {
         "message": "Status berhasil diperbarui.",
@@ -333,9 +287,7 @@ def api_update_status(
     }
 
 @app.get("/api/map")
-async def get_map_data(
-    db: Session = Depends(get_db)
-):
+async def get_map_data(db: Session = Depends(get_db)):
 
     laporan = get_all_laporan(db)
     hasil = []
@@ -360,9 +312,7 @@ async def get_map_data(
     return hasil
 
 @app.post("/upload-image")
-async def upload_image(
-    image: UploadFile = File(...)
-):
+async def upload_image(image: UploadFile = File(...)):
 
     ext = image.filename.split(".")[-1]
     filename = f"{uuid.uuid4()}.{ext}"

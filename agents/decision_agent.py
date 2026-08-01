@@ -29,7 +29,6 @@ def make_decision(
     
     # bukan laporan
     if intent == "lainnya":
-
         return DecisionOutput(
             action="reject",
             eskalasi_posko=False,
@@ -39,7 +38,6 @@ def make_decision(
 
     # tanya informasi
     if intent == "tanya_info":
-
         return DecisionOutput(
             action="respond",
             eskalasi_posko=False,
@@ -49,7 +47,6 @@ def make_decision(
 
     # hanya banjir
     if disaster_type != "banjir":
-
         return DecisionOutput(
             action="reject",
             eskalasi_posko=False,
@@ -59,7 +56,6 @@ def make_decision(
 
     # foto terindikasi palsu
     if possible_fake:
-
         return DecisionOutput(
             action="reject",
             eskalasi_posko=False,
@@ -69,7 +65,6 @@ def make_decision(
 
     # vision tidak menemukan banjir
     if flood_detected is False:
-
         return DecisionOutput(
             action="reject",
             eskalasi_posko=False,
@@ -77,7 +72,29 @@ def make_decision(
             reason="Laporan ditolak karena objek banjir sama sekali tidak terdeteksi pada gambar."
         )
     
-    # banjir terdeteksi tetapi tidak ada objek referensi
+    # kondisi sangat meyakinkan
+    if (
+        validation_score >= 60
+        and vision_confidence >= 0.90
+        and severity in ["Tinggi", "Sedang"]
+    ):
+        return DecisionOutput(
+            action="escalate",
+            eskalasi_posko=True,
+            kategori_laporan="insiden terverifikasi",
+            reason="Validator dan Vision Agent sama-sama menunjukkan banjir dengan tingkat keyakinan tinggi."
+        )
+
+    # bypass (skor validasi gagal, tapi visual sangat meyakinkan)
+    if vision_confidence >= 0.90 and severity == "Tinggi":
+        return DecisionOutput(
+            action="escalate",
+            eskalasi_posko=True,
+            kategori_laporan="perlu tinjauan",
+            reason="Eskalasi darurat: Vision Agent mendeteksi banjir tingkat Tinggi dengan keyakinan visual yang sangat kuat, mengabaikan skor validasi."
+        )
+
+    # banjir terdeteksi tetapi tidak ada objek referensi  
     if flood_detected is True and object_count == 0:
         return DecisionOutput(
             action="escalate",
@@ -86,26 +103,11 @@ def make_decision(
             reason="Banjir terdeteksi, namun tidak ada objek referensi untuk mengukur kedalaman. Eskalasi paksa ke posko untuk pengecekan manual."
         )   
 
-    # kondisi sangat meyakinkan
-    if (
-        validation_score >= 60
-        and vision_confidence >= 0.80
-        and severity in ["Tinggi", "Sedang"]
-    ):
-
-        return DecisionOutput(
-            action="escalate",
-            eskalasi_posko=True,
-            kategori_laporan="insiden terverifikasi",
-            reason="Validator dan Vision Agent sama-sama menunjukkan banjir dengan tingkat keyakinan tinggi."
-        )
-
     # cukup yakin
     if (
         validation_score >= 40
         and vision_confidence >= 0.60
     ):
-
         return DecisionOutput(
             action="respond",
             eskalasi_posko=False,
@@ -113,14 +115,13 @@ def make_decision(
             reason="Laporan cukup meyakinkan namun masih memerlukan verifikasi operator."
         )
 
-    # skor rendah
+    # skor rendah (fallback)
     return DecisionOutput(
         action="respond",
         eskalasi_posko=False,
         kategori_laporan="perlu tinjauan",
         reason="Data validasi belum cukup untuk melakukan eskalasi otomatis."
     )
-
 
 if __name__ == "__main__":
 

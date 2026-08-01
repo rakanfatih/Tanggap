@@ -183,14 +183,6 @@ def analyze_image(image_path: str) -> VisionOutput:
             reason=f"Gagal memproses/parsing JSON dari API: {str(e)}"
         )
 
-    base_name = os.path.basename(image_path)
-    name, ext = os.path.splitext(base_name)
-    vision_filename = f"{name}_vision{ext}" 
-    vision_image_path = os.path.join(os.path.dirname(image_path), vision_filename)
-    
-    if not os.path.exists(vision_image_path):
-        shutil.copy(image_path, vision_image_path)
-
-    hasil.vision_image_path = vision_image_path
+    hasil.vision_image_path = None
 
     return hasil
