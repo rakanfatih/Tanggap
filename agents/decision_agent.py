@@ -110,16 +110,16 @@ def make_decision(
     ):
         return DecisionOutput(
             action="respond",
-            eskalasi_posko=False,
+            eskalasi_posko=True,
             kategori_laporan="perlu tinjauan",
             reason="Laporan cukup meyakinkan namun masih memerlukan verifikasi operator."
         )
 
     # skor rendah (fallback)
     return DecisionOutput(
-        action="respond",
+        action="reject",
         eskalasi_posko=False,
-        kategori_laporan="perlu tinjauan",
+        kategori_laporan="bukan laporan",
         reason="Data validasi belum cukup untuk melakukan eskalasi otomatis."
     )
 

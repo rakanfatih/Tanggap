@@ -66,6 +66,7 @@ def analyze_image(image_path: str) -> VisionOutput:
         1. DILARANG KERAS menggunakan tag <think> atau menjabarkan proses berpikirmu.
         2. LANGSUNG mulai jawabanmu dengan karakter '{' dan akhiri dengan '}'.
         3. HANYA berikan objek JSON murni tanpa markdown (jangan gunakan ```json) dan tanpa teks pengantar/penutup apa pun.
+        4. JIKA tidak mendeteksi banjir, tetap kembalikan objek JSON dengan "flood_detected": false dan sertakan "reason" yang menjelaskan mengapa tidak terdeteksi.
 
         {
             "flood_detected": true,

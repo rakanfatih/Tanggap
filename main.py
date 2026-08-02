@@ -5,7 +5,7 @@ import uvicorn
 import time
 import json
 from dotenv import load_dotenv
-from typing import Optional
+from typing import Optional, List
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -32,8 +32,9 @@ app = FastAPI(
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+os.makedirs("assets_edukasi", exist_ok=True)
+app.mount("/assets", StaticFiles(directory="assets_edukasi"), name="assets")
 
 DASHBOARD_URL = os.getenv("DASHBOARD_URL", "http://127.0.0.1:5000")
 
@@ -329,6 +330,51 @@ async def upload_image(image: UploadFile = File(...)):
         "filename": filename,
         "path": filepath
     }
+
+class EdukasiItem(BaseModel):
+    id: str
+    judul: str
+    deskripsi: str
+    thumbnail: str
+    tipe_konten: str
+    durasi: str
+    file_url: str
+
+SERVER_URL = os.getenv("SERVER_URL", "http://192.168.1.10:8000")
+
+DATA_EDUKASI = []
+try:
+    with open("edukasi.json", "r", encoding="utf-8") as file:
+        RAW_DATA_EDUKASI = json.load(file)
+        
+        for item in RAW_DATA_EDUKASI:
+            is_external_link = item["file"].startswith("http")
+            final_file_url = item["file"] if is_external_link else f"{SERVER_URL}/assets/{item['file']}"
+            
+            DATA_EDUKASI.append(
+                EdukasiItem(
+                    id=item["id"],
+                    judul=item["judul"],
+                    deskripsi=item["deskripsi"],
+                    thumbnail=f"{SERVER_URL}/assets/{item['gambar']}",
+                    tipe_konten=item["tipe"],
+                    durasi=item["durasi"],
+                    file_url=final_file_url
+                )
+            )
+except FileNotFoundError:
+    print("[WARNING] File edukasi.json tidak ditemukan. Data edukasi akan kosong.")
+except json.JSONDecodeError:
+    print("[ERROR] Format edukasi.json salah. Pastikan JSON valid.")
+
+@app.get("/api/edukasi", response_model=list[EdukasiItem])
+def get_semua_edukasi(bencana: Optional[str] = None, fase: Optional[str] = None, tipe: Optional[str] = None):
+    hasil = DATA_EDUKASI
+    
+    if tipe and tipe.lower() != "semua":
+        hasil = [item for item in hasil if item.tipe_konten.lower() == tipe.lower()]
+        
+    return hasil
 
 # run
 if __name__ == "__main__":

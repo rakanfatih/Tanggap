@@ -1,0 +1,47 @@
+[
+    {
+        "id": "1",
+        "judul": "Buku Saku: Panduan Kesiapsiagaan Menghadapi Banjir Bagi Masyarakat",
+        "deskripsi": "Panduan Kesiapsiagaan Menghadapi Banjir Bagi Masyarakat",
+        "gambar": "bukusaku.jpg", 
+        "tipe": "Artikel",
+        "durasi": "5 menit baca",
+        "file": "buku-saku-panduan-kesiapsiagaan-menghadapi-banjir-bagi-masyarakat.pdf" 
+    },
+    {
+        "id": "2",
+        "judul": "SIAGA Banjir",
+        "deskripsi": "Video panduan 3 menit",
+        "gambar": "siagabanjir.jpg", 
+        "tipe": "Video",
+        "durasi": "5 menit",
+        "file": "https://www.youtube.com/watch?v=nJeNMDZvcrQ"
+    },
+    {
+        "id": "3",
+        "judul": "Udah Siapin Tas Siaga Bencana?",
+        "deskripsi": "Udah Siapin Tas Siaga Bencana?",
+        "gambar": "tassiaga.jpg", 
+        "tipe": "Infografik",
+        "durasi": "1 halaman",
+        "file": "udah-siapin-tas-siaga-bencana.pdf" 
+    },
+    {
+        "id": "4",
+        "judul": "Pedoman Pengendalian Banjir Bagi Organisasi Perangkat Daerah, Lembaga Usaha & Relawan",
+        "deskripsi": "Kesiapsiagaan Menghadapi Banjir",
+        "gambar": "pedomanpengendalian.jpg", 
+        "tipe": "Artikel",
+        "durasi": "7 menit baca",
+        "file": "pedoman_pengendalian_banjir.pdf" 
+    },
+    {
+        "id": "5",
+        "judul": "Pertolongan pertama pada korban tenggelam",
+        "deskripsi": "Tindakan yang benar",
+        "gambar": "tenggelam.jpg", 
+        "tipe": "Video",
+        "durasi": "6 menit",
+        "file": "https://www.youtube.com/watch?v=nQS-F0kqGHE"
+    }
+]
