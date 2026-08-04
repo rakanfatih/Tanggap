@@ -15,96 +15,31 @@ class RouterOutput(BaseModel):
     alasan: str = Field(description="alasan klasifikasi")
 
 # router agent
-def route_message(
-        user_message: str,
-        chat_history: str = ""
-):
-
+def route_message(user_message: str, chat_history: str = ""):
     llm = ChatGroq(
         model="llama-3.3-70b-versatile",
         temperature=0
     )
-
-    structured_llm = llm.with_structured_output(
-        RouterOutput
-    )
+    structured_llm = llm.with_structured_output(RouterOutput)
 
     system_prompt = """
         Kamu adalah Router Agent pada sistem koordinasi bencana BPBD.
         Tugasmu HANYA mengklasifikasikan pesan warga.
 
         [INTENT]
-        Hanya boleh memilih SATU:
-        1. lapor_darurat
-        2. tanya_info
-        3. lainnya
+        Hanya boleh memilih SATU: 1. lapor_darurat, 2. tanya_info, 3. lainnya
 
         [ATURAN LAPOR_DARURAT]
         Pilih "lapor_darurat" HANYA jika warga melaporkan kejadian BANJIR.
-        Contoh:
-        - rumah kebanjiran
-        - air masuk rumah
-        - genangan tinggi
-        - sungai meluap
-        - tanggul jebol
-        - banjir besar
-        - terjebak banjir
-        - butuh evakuasi banjir
-
-        [ATURAN TANYA_INFO]
-        Jika warga bertanya mengenai:
-        - SOP banjir
-        - evakuasi banjir
-        - nomor darurat
-        - lokasi posko
-        - bantuan banjir
-        - langkah menghadapi banjir
-
-        [LAINNYA]
-        SEMUA kondisi berikut WAJIB memilih "lainnya":
-        - gempa
-        - tsunami
-        - longsor
-        - kebakaran
-        - angin puting beliung
-        - pohon tumbang
-        - kriminalitas
-        - kecelakaan
-        - kehilangan
-        - spam
-        - candaan
-        - salam
-        - percakapan biasa
-
-        [DISASTER TYPE]
-        Pilih salah satu:
-        banjir
-        gempa
-        tsunami
-        longsor
-        kebakaran
-        angin
-        kriminalitas
-        kecelakaan
-        spam
-        lainnya
 
         [SANGAT PENTING]
-        Jika pesan membahas GEMPA,
-        MAKA:
-        intent = lainnya
-        disaster_type = gempa
+        Sistem ini EKSKLUSIF hanya menangani pelaporan darurat untuk BANJIR.
+        Jika warga melaporkan BENCANA LAIN (seperti gempa, kebakaran, longsor, tsunami, angin puting beliung, atau kecelakaan), MAKA:
+        - intent = lainnya
+        - disaster_type = [sesuaikan dengan jenis bencana yang dilaporkan]
 
-        JANGAN PERNAH memilih lapor_darurat.
-
-        Hal yang sama berlaku untuk kebakaran,
-        longsor,
-        tsunami,
-        dan bencana selain banjir.
-
-        Jangan pernah berhalusinasi.
-
-        Jawab sesuai schema.
+        JANGAN PERNAH memilih "lapor_darurat" untuk bencana selain banjir.
+        Jangan pernah berhalusinasi. Jawab sesuai schema.
         """
 
     prompt = ChatPromptTemplate.from_messages([

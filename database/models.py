@@ -1,14 +1,17 @@
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timedelta
 from database.database import Base
 
+
+def get_waktu_wib():
+    return datetime.utcnow() + timedelta(hours=7)
 # laporan
 class Laporan(Base):
     __tablename__ = "laporan"
-
+    
     id = Column(Integer, primary_key=True, index=True)
-    waktu = Column(DateTime, default=datetime.utcnow)
+    waktu = Column(DateTime, default=get_waktu_wib)
     session_id = Column(String, default="default_session")
     processing_time = Column(Float, default=0.0)
     pesan = Column(String)
@@ -23,6 +26,7 @@ class Laporan(Base):
     validator = relationship("Validator", back_populates="laporan", uselist=False, cascade="all, delete-orphan")
     decision = relationship("Decision", back_populates="laporan", uselist=False, cascade="all, delete-orphan")
     vision = relationship("Vision", back_populates="laporan", uselist=False, cascade="all, delete-orphan")
+    executor = relationship("Executor", back_populates="laporan", uselist=False, cascade="all, delete-orphan")
 
 # router
 class Router(Base):
@@ -55,7 +59,6 @@ class Decision(Base):
     action = Column(String)
     kategori_laporan = Column(String)
     eskalasi_posko = Column(Boolean)
-    final_response = Column(String)
 
     laporan = relationship("Laporan", back_populates="decision")
 
@@ -70,3 +73,11 @@ class Vision(Base):
     vision_image_path = Column(String, nullable=True)
 
     laporan = relationship("Laporan", back_populates="vision")
+
+class Executor(Base):
+    __tablename__ = "executor"
+    id = Column(Integer, primary_key=True, index=True)
+    laporan_id = Column(Integer, ForeignKey("laporan.id", ondelete="CASCADE"))
+    final_response = Column(String)
+
+    laporan = relationship("Laporan", back_populates="executor")

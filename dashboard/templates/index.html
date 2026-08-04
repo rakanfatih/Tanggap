@@ -8,7 +8,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -94,22 +93,6 @@
             </div>
         </div>
 
-        <!-- CHARTS SECTION -->
-        <div class="charts-container">
-            <!-- Bar Chart (Keparahan) -->
-            <div style="position: relative; height: 250px; width: 100%;">
-                <h6 class="text-muted text-center mb-2">Tingkat Keparahan Banjir (Vision AI)</h6>
-                <canvas id="barChart"></canvas>
-            </div>
-            
-            <!-- Donut Chart (Kategori Validasi) -->
-            <div style="position: relative; height: 250px; width: 100%; display: flex; flex-direction: column; align-items: center;">
-                <h6 class="text-muted text-center mb-2">Validasi Insiden (AI Decision)</h6>
-                <div style="position: relative; height: 200px; width: 100%;">
-                    <canvas id="donutChart"></canvas>
-                </div>
-            </div>
-        </div>
     </main>
 </div>
 
@@ -125,52 +108,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-<!-- CHART.JS CONFIG -->
-<script>
-    const ctxBar = document.getElementById('barChart').getContext('2d');
-    new Chart(ctxBar, {
-        type: 'bar',
-        data: {
-            labels: ['Tinggi', 'Sedang', 'Rendah'],
-            datasets: [{
-                label: 'Jumlah Lokasi',
-                data: [{{ keparahan_tinggi }}, {{ keparahan_sedang }}, {{ keparahan_rendah }}],
-                backgroundColor: ['#e74a3b', '#f6c23e', '#f1c40f'], 
-                borderRadius: 4
-            }]
-        },
-        options: { 
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } }, 
-            scales: { 
-                x: { beginAtZero: true }, 
-                y: { grid: { display: false } } 
-            } 
-        }
-    });
-
-    const ctxDonut = document.getElementById('donutChart').getContext('2d');
-    new Chart(ctxDonut, {
-        type: 'doughnut',
-        data: {
-            labels: ['Terverifikasi', 'Perlu Tinjauan', 'Bukan Laporan'],
-            datasets: [{
-                data: [{{ kat_terverifikasi }}, {{ kat_tinjauan }}, {{ kat_bukan }}],
-                backgroundColor: ['#1cc88a', '#f6c23e', '#eaecf4'],
-                borderWidth: 2
-            }]
-        },
-        options: { 
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom' } }, 
-            cutout: '65%' 
-        }
-    });
-</script>
 
 <!-- REAL-TIME POLLING (INTERACTIVE SOFT-REFRESH) -->
 <script>

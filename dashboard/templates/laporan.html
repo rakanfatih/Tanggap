@@ -111,7 +111,7 @@
                             <th class="text-center" width="5%">ID</th>
                             <th width="20%">Waktu</th>
                             <th width="20%">Status</th>
-                            <th width="35%">Kategori</th>
+                            <th width="35%">Kategori (AI vs Operator)</th>
                             <th class="text-center" width="10%">Aksi</th>
                         </tr>
                     </thead>
@@ -131,15 +131,17 @@
                                 </form>
                             </td>
                             
+                            <!-- INTERVENSI OPERATOR PADA KATEGORI AI -->
                             <td data-search="{{ item.kategori_laporan }}">
-                                {% if item.kategori_laporan == "insiden terverifikasi" %}
-                                    <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-2 rounded-pill"><i class="fa-solid fa-circle-check me-1"></i> Terverifikasi</span>
-                                {% elif item.kategori_laporan == "perlu tinjauan" %}
-                                    <span class="badge bg-warning bg-opacity-10 text-dark border border-warning px-3 py-2 rounded-pill"><i class="fa-solid fa-circle-exclamation me-1"></i> Perlu Tinjauan</span>
-                                {% else %}
-                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-3 py-2 rounded-pill"><i class="fa-solid fa-ban me-1"></i> Bukan Laporan</span>
-                                {% endif %}
+                                <form action="/update-kategori/{{ item.id }}" method="POST" class="m-0">
+                                    <select name="kategori" class="form-select form-select-sm shadow-none {% if item.kategori_laporan == 'insiden terverifikasi' %}border-success text-success fw-bold bg-success bg-opacity-10{% elif item.kategori_laporan == 'perlu tinjauan' %}border-warning text-dark fw-bold bg-warning bg-opacity-10{% else %}border-secondary text-secondary fw-bold bg-secondary bg-opacity-10{% endif %}" onchange="this.form.submit()">
+                                        <option value="insiden terverifikasi" {% if item.kategori_laporan == "insiden terverifikasi" %}selected{% endif %}>Terverifikasi (Valid)</option>
+                                        <option value="perlu tinjauan" {% if item.kategori_laporan == "perlu tinjauan" %}selected{% endif %}>Perlu Tinjauan</option>
+                                        <option value="bukan laporan" {% if item.kategori_laporan == "bukan laporan" %}selected{% endif %}>Bukan Laporan (Tolak)</option>
+                                    </select>
+                                </form>
                             </td>
+                            
                             <td class="text-center">
                                 <a href="/laporan/{{ item.id }}" class="btn btn-sm btn-light border text-primary" title="Lihat Detail">
                                     <i class="fa-solid fa-arrow-up-right-from-square"></i>

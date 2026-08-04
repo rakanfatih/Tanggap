@@ -154,8 +154,10 @@ body {
     box-shadow: 0 4px 15px rgba(0,0,0,0.05);
 }
 
+/* PERUBAHAN: Memperbesar Peta karena tidak ada grafik lagi */
 #map {
-    height: 450px;
+    height: 65vh;       /* Dinamis menyesuaikan tinggi layar operator */
+    min-height: 500px;  /* Batas minimal jika layar kecil */
     border-radius: 15px;
     z-index: 1;
 }
@@ -166,6 +168,8 @@ body {
     border-radius: 20px;
     padding: 25px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    max-height: calc(65vh + 20px); /* Menyamakan tinggi dengan peta */
+    overflow-y: auto; /* Scroll jika laporan lebih dari 5 */
 }
 
 .recent-reports h5 {
@@ -206,17 +210,6 @@ body {
     color: #333;
     font-size: 20px;
     text-decoration: none;
-}
-
-/* Charts Section */
-.charts-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 30px;
-    background: white;
-    padding: 20px;
-    border-radius: 20px;
-    margin-bottom: 30px;
 }
 
 /* Tabel Utama */
@@ -261,8 +254,9 @@ body {
     .dashboard-grid {
         grid-template-columns: 1fr; /* Peta & Laporan ditumpuk ke bawah */
     }
-    .charts-container {
-        grid-template-columns: 1fr; /* Grafik ditumpuk ke bawah */
+    
+    #map {
+        height: 400px; /* Kembalikan ke ukuran standar jika di layar sempit agar tidak menutupi seluruh layar */
     }
 }
 

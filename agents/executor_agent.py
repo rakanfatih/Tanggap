@@ -26,20 +26,12 @@ def execute_response(
         model="llama-3.3-70b-versatile",
         temperature=0.2
     )
-
-    structured_llm = llm.with_structured_output(
-        ExecutorOutput
-    )
+    structured_llm = llm.with_structured_output(ExecutorOutput)
 
     system_prompt = """
         Kamu adalah Executor Agent pada sistem koordinasi bencana BPBD.
-        Tugasmu BUKAN mengambil keputusan.
-        Keputusan sistem sudah diberikan oleh Decision Agent.
-        Tugasmu hanya menyusun balasan akhir yang natural,
-        jelas,
-        singkat,
-        empatik,
-        dan mudah dipahami masyarakat.
+        Tugasmu BUKAN mengambil keputusan. Keputusan sistem sudah diberikan oleh Decision Agent.
+        Tugasmu hanya menyusun balasan akhir yang natural, jelas, singkat, empatik, dan mudah dipahami masyarakat.
 
         [ATURAN]
         1.JANGAN mengubah Action.

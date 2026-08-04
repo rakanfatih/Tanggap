@@ -8,26 +8,102 @@ from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
 
+try:
+    from groq import BadRequestError as GroqBadRequestError
+except ImportError:
+    GroqBadRequestError = None
+
 from vision.vision_schema import VisionOutput
 from vision.image_validator import validate_image
 
 load_dotenv()
 
+
 def encode_image(image_path: str, max_size: int = 800):
     img = cv2.imread(image_path)
-    
+
     if img is None:
         raise ValueError(f"Gagal membaca gambar di {image_path}")
 
     h, w = img.shape[:2]
-    
+
     if max(h, w) > max_size:
         scale = max_size / float(max(h, w))
         img = cv2.resize(img, (int(w * scale), int(h * scale)))
-    
+
     _, buffer = cv2.imencode('.jpg', img, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
-    
+
     return base64.b64encode(buffer).decode('utf-8')
+
+
+def _extract_text_content(content) -> str:
+    if content is None:
+        return ""
+
+    if isinstance(content, str):
+        return content.strip()
+
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict):
+                block_type = block.get("type")
+                if block_type in ("reasoning", "thinking"):
+                    continue
+                text_val = block.get("text") or block.get("content")
+                if isinstance(text_val, str):
+                    parts.append(text_val)
+        return "".join(parts).strip()
+
+    return str(content).strip()
+
+
+def _strip_think_tags(text: str) -> str:
+    cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+    if "<think>" in cleaned and "</think>" not in cleaned:
+        cleaned = cleaned.split("<think>")[0]
+    return cleaned.strip()
+
+
+def _extract_balanced_json(text: str) -> str | None:
+    start = text.find("{")
+    if start == -1:
+        return None
+
+    depth = 0
+    in_string = False
+    escape = False
+
+    for i in range(start, len(text)):
+        ch = text[i]
+
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            continue
+
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:i + 1]
+
+    return None  
+
+
+def _clean_json_text(json_str: str) -> str:
+    json_str = re.sub(r",\s*([}\]])", r"\1", json_str)
+    return json_str
+
 
 def analyze_image(image_path: str) -> VisionOutput:
 
@@ -50,11 +126,17 @@ def analyze_image(image_path: str) -> VisionOutput:
             vision_image_path=None
         )
 
-    # inisialisasi model
     llm = ChatGroq(
         model="qwen/qwen3.6-27b",
-        temperature=0.0,
-        max_tokens=2500 
+        temperature=0.7,
+        max_tokens=2500,
+        reasoning_effort="none",
+        reasoning_format="hidden",
+        model_kwargs={
+            "response_format": {"type": "json_object"},
+            "presence_penalty": 1.5,
+            "top_p": 0.80,
+        },
     )
 
     base64_image = encode_image(image_path)
@@ -109,7 +191,7 @@ def analyze_image(image_path: str) -> VisionOutput:
         4. Set "confidence" menjadi rendah (misalnya 0.3 atau 0.4).
         5. Set "severity" menjadi "Tidak Dapat Dipastikan".
         6. Pada "reason", tuliskan: "Hanya terlihat hamparan air tanpa objek referensi untuk mengukur kedalaman."
-        """                     
+        """
 
     message = HumanMessage(
         content=[
@@ -121,41 +203,68 @@ def analyze_image(image_path: str) -> VisionOutput:
         ]
     )
 
+    raw_text = ""  
+
     try:
         print("[VISION] Sedang memproses gambar via Qwen...")
-        response = llm.invoke([message])
-        
-        if not response or not hasattr(response, "content") or not response.content:
+        try:
+            response = llm.invoke([message])
+        except Exception as api_err:
+            is_groq_bad_request = GroqBadRequestError is not None and isinstance(api_err, GroqBadRequestError)
+            error_body = getattr(api_err, "body", None)
+            failed_generation = ""
+            if isinstance(error_body, dict):
+                failed_generation = (error_body.get("error") or {}).get("failed_generation", "") or ""
+
+            if is_groq_bad_request or failed_generation:
+                print(f"[VISION] Groq menolak request (400 json_validate_failed): {api_err}")
+                if failed_generation:
+                    print(f"[VISION] failed_generation dari Groq: {failed_generation[:500]}")
+                    raw_text = failed_generation
+                    response = None 
+                else:
+                    raise ValueError(
+                        "Groq menolak generation (400 json_validate_failed) dan tidak "
+                        "ada failed_generation untuk dipulihkan."
+                    ) from api_err
+            else:
+                raise
+
+        if response is not None and (not hasattr(response, "content") or not response.content):
             raise ValueError("API mengembalikan respons kosong (None atau empty content).")
 
-        raw_text = response.content.strip()
+        if response is not None:
+            raw_text = _extract_text_content(response.content)
 
         if not raw_text:
-            raise ValueError("Variabel raw_text kosong setelah strip().")
-        
-        if "</think>" in raw_text:
-            raw_text = raw_text.split("</think>")[-1].strip()
+            raise ValueError("Konten teks kosong setelah normalisasi response.content.")
 
-        match = re.search(r'\{.*\}', raw_text, re.DOTALL)
-        
-        if match:
-            clean_json_str = match.group(0)
+        raw_text = _strip_think_tags(raw_text)
+
+        raw_text = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_text.strip())
+
+        json_str = _extract_balanced_json(raw_text)
+
+        if json_str:
+            clean_json_str = _clean_json_text(json_str)
             data_dict = json.loads(clean_json_str)
 
-            # Konversi boolean jika dikembalikan sebagai string
             if isinstance(data_dict.get("flood_detected"), str):
                 data_dict["flood_detected"] = data_dict["flood_detected"].lower() == "true"
             if isinstance(data_dict.get("possible_fake"), str):
                 data_dict["possible_fake"] = data_dict["possible_fake"].lower() == "true"
         else:
-            print("[VISION] Warning: Model tidak mengeluarkan JSON murni (terpotong). Melakukan ekstraksi fallback dari teks mentah...")
-            
+            print("[VISION] Warning: Model tidak mengeluarkan JSON murni (terpotong). "
+                "Melakukan ekstraksi fallback dari teks mentah...")
+            print(f"[VISION] Raw text (untuk debug): {raw_text[:500]}")
+
             is_flood = "flooded" in raw_text.lower() or "banjir" in raw_text.lower() or "water" in raw_text.lower()
-            
+
             data_dict = {
                 "flood_detected": is_flood,
                 "confidence": 0.85 if is_flood else 0.1,
-                "severity": "Sedang" if "sedang" in raw_text.lower() or "65" in raw_text or "70" in raw_text else ("Tinggi" if "tinggi" in raw_text.lower() else "Tidak Terdeteksi"),
+                "severity": "Sedang" if "sedang" in raw_text.lower() or "65" in raw_text or "70" in raw_text else (
+                    "Tinggi" if "tinggi" in raw_text.lower() else "Tidak Terdeteksi"),
                 "estimated_water_level": "Sedang" if is_flood else "Tidak Terdeteksi",
                 "estimated_water_cm": 70.0 if is_flood else 0.0,
                 "water_percentage": 80.0 if is_flood else 0.0,
@@ -168,8 +277,25 @@ def analyze_image(image_path: str) -> VisionOutput:
 
         hasil = VisionOutput(**data_dict)
 
+    except json.JSONDecodeError as e:
+        print(f"[VISION] JSON tidak valid: {e}")
+        print(f"[VISION] Raw text (untuk debug): {raw_text[:1000]}")
+        hasil = VisionOutput(
+            flood_detected=False,
+            confidence=0.0,
+            severity="Tidak Terdeteksi",
+            estimated_water_level="Error",
+            estimated_water_cm=0.0,
+            water_percentage=0.0,
+            visible_objects=[],
+            object_count=0,
+            image_quality="Buruk",
+            possible_fake=True,
+            reason=f"JSON dari API tidak valid: {str(e)}"
+        )
     except Exception as e:
         print(f"[VISION] Warning/Error saat parsing LLM: {e}")
+        print(f"[VISION] Raw text (untuk debug): {raw_text[:1000]}")
         hasil = VisionOutput(
             flood_detected=False,
             confidence=0.0,

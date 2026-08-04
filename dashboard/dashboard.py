@@ -23,54 +23,18 @@ print("DEBUG API_BASE =", API_BASE)
 def index():
     try:
         response = requests.get(f"{API_URL}/laporan")
-        if response.status_code == 200:
-            laporan = [item for item in response.json() if item.get("eskalasi_posko") == True]
-        else:
-            laporan = []
+        laporan = [item for item in response.json() if item.get("eskalasi_posko") == True] if response.status_code == 200 else []
     except requests.exceptions.RequestException:
         laporan = []
     
     total = len(laporan)
-    
     menunggu = sum(1 for item in laporan if item["status"] == "Menunggu")
     diproses = sum(1 for item in laporan if item["status"] == "Diproses")
     selesai = sum(1 for item in laporan if item["status"] == "Selesai")
 
-    kat_terverifikasi = sum(1 for item in laporan if item["kategori_laporan"] == "insiden terverifikasi")
-    kat_tinjauan = sum(1 for item in laporan if item["kategori_laporan"] == "perlu tinjauan")
-    kat_bukan = sum(1 for item in laporan if item["kategori_laporan"] == "bukan laporan")
-
-    keparahan_tinggi = 0
-    keparahan_sedang = 0
-    keparahan_rendah = 0
-
-    for item in laporan:
-        if item["intent"] == "lapor_darurat" and item.get("vision_result"):
-            try:
-                vision_data = json.loads(item["vision_result"])
-                sev = vision_data.get("severity", "")
-                if sev == "Tinggi":
-                    keparahan_tinggi += 1
-                elif sev == "Sedang":
-                    keparahan_sedang += 1
-                elif sev == "Rendah":
-                    keparahan_rendah += 1
-            except Exception:
-                pass
-
     return render_template(
         "index.html",
-        laporan=laporan,
-        total=total,
-        menunggu=menunggu,
-        diproses=diproses,
-        selesai=selesai,
-        kat_terverifikasi=kat_terverifikasi,
-        kat_tinjauan=kat_tinjauan,
-        kat_bukan=kat_bukan,
-        keparahan_tinggi=keparahan_tinggi,
-        keparahan_sedang=keparahan_sedang,
-        keparahan_rendah=keparahan_rendah,
+        laporan=laporan, total=total, menunggu=menunggu, diproses=diproses, selesai=selesai,
         api_base=API_BASE
     )
 
@@ -136,6 +100,17 @@ def update_status_laporan(laporan_id):
     return redirect(
         request.referrer or url_for('index')
     )
+
+@app.post("/update-kategori/<int:laporan_id>")
+def update_kategori_laporan(laporan_id):
+    kategori = request.form["kategori"]
+
+    requests.put(
+        f"{API_URL}/laporan/{laporan_id}/kategori",
+        json={"kategori": kategori}
+    )
+
+    return redirect(request.referrer or url_for('daftar_laporan'))
 
 @app.route("/analysis")
 def analysis():

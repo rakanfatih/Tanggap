@@ -1,10 +1,8 @@
 from sqlalchemy.orm import Session
-from database.models import Laporan, Router, Validator, Decision, Vision
+from database.models import Laporan, Router, Validator, Decision, Vision, Executor
 
-def simpan_laporan(
-    db: Session,
-    data: dict
-):
+
+def simpan_laporan(db: Session, data: dict):
     status_awal = "Diproses" if data.get("kategori_laporan") == "insiden terverifikasi" else "Menunggu"
 
     laporan = Laporan(
@@ -43,9 +41,15 @@ def simpan_laporan(
         action=data["action"],
         kategori_laporan=data["kategori_laporan"],
         eskalasi_posko=data["eskalasi_posko"],
-        final_response=data["final_response"]
     )
     db.add(decision)
+
+    #simpan data executor
+    executor = Executor(
+        laporan_id=laporan.id,
+        final_response=data["final_response"]
+    )
+    db.add(executor)
 
     # simpan data vision
     vision = Vision(
@@ -61,12 +65,7 @@ def simpan_laporan(
 
     return laporan
 
-def get_chat_history(
-        db: Session, 
-        session_id: str, 
-        limit: int = 5
-):
-    
+def get_chat_history(db: Session, session_id: str, limit: int = 5):
     histori = (
         db.query(Laporan)
         .filter(Laporan.session_id == session_id)
@@ -78,8 +77,8 @@ def get_chat_history(
     chat_history = ""
     for h in histori:
         chat_history += f"Warga: {h.pesan}\n"
-        if h.decision:
-            chat_history += f"GARDA: {h.decision.final_response}\n\n"
+        if h.executor:
+            chat_history += f"GARDA: {h.executor.final_response}\n\n"
         else:
             chat_history += "GARDA: \n\n"
         
@@ -104,15 +103,8 @@ def get_laporan_by_id(
         .first()
     )
 
-def update_status(
-    db: Session,
-    laporan_id: int,
-    status: str
-):
-    laporan = get_laporan_by_id(
-        db,
-        laporan_id
-    )
+def update_status(db: Session, laporan_id: int, status: str):
+    laporan = get_laporan_by_id(db, laporan_id)
 
     if laporan is None:
         return None
@@ -121,5 +113,19 @@ def update_status(
 
     db.commit()
     db.refresh(laporan)
+
+    return laporan
+
+def update_kategori_laporan(db: Session, laporan_id: int, kategori: str):
+    laporan = get_laporan_by_id(db, laporan_id)
+
+    if laporan and laporan.decision:
+        laporan.decision.kategori_laporan = kategori
+        
+        if kategori == "insiden terverifikasi" and laporan.status == "Menunggu":
+            laporan.status = "Diproses"
+            
+        db.commit()
+        db.refresh(laporan)
 
     return laporan

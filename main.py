@@ -95,6 +95,9 @@ class DashboardLaporan(BaseModel):
 class UpdateStatusRequest(BaseModel):
     status: str
 
+class UpdateKategoriRequest(BaseModel):
+    kategori: str
+
 # endpoint
 @app.post("/api/lapor", response_model=LaporanResponse)
 @limiter.limit("5/minute")
@@ -242,7 +245,7 @@ def api_get_laporan(db: Session = Depends(get_db)):
                 action=item.decision.action if item.decision else "reject",
                 kategori_laporan=item.decision.kategori_laporan if item.decision else "bukan laporan",
                 eskalasi_posko=item.decision.eskalasi_posko if item.decision else False,
-                final_response=item.decision.final_response if item.decision else "Tidak ada respons.",
+                final_response=item.executor.final_response if item.executor else "Tidak ada respons.",
                 status=item.status
             )
         )
@@ -274,7 +277,7 @@ def api_get_laporan_by_id(laporan_id: int, db: Session = Depends(get_db)):
         action=item.decision.action if item.decision else "reject",
         kategori_laporan=item.decision.kategori_laporan if item.decision else "bukan laporan",
         eskalasi_posko=item.decision.eskalasi_posko if item.decision else False,
-        final_response=item.decision.final_response if item.decision else "Tidak ada respons.",
+        final_response=item.executor.final_response if item.executor else "Tidak ada respons.",
         status=item.status
     )
 
@@ -375,6 +378,20 @@ def get_semua_edukasi(bencana: Optional[str] = None, fase: Optional[str] = None,
         hasil = [item for item in hasil if item.tipe_konten.lower() == tipe.lower()]
         
     return hasil
+
+@app.put("/api/laporan/{laporan_id}/kategori")
+def api_update_kategori(laporan_id: int, payload: UpdateKategoriRequest, db: Session = Depends(get_db)):
+    from database.crud import update_kategori_laporan # import fungsi baru
+    
+    laporan = update_kategori_laporan(db, laporan_id, payload.kategori)
+
+    if laporan is None:
+        raise HTTPException(status_code=404, detail="Laporan tidak ditemukan.")
+
+    return {
+        "message": "Kategori berhasil diperbarui.",
+        "kategori": laporan.decision.kategori_laporan
+    }
 
 # run
 if __name__ == "__main__":
