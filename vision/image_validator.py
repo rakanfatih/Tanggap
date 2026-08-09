@@ -22,22 +22,14 @@ def validate_image(image_path: str):
         )
 
     image = cv2.imread(image_path)
-
     if image is None:
         raise ValueError(
             "Gagal membaca gambar."
         )
 
     h, w = image.shape[:2]
-
     if h < 200 or w < 200:
         raise ValueError(
             "Resolusi gambar terlalu kecil."
         )
-
-    return {
-        "valid": True,
-        "image": image,
-        "width": w,
-        "height": h
-    }
+    return {"valid": True, "image": image, "width": w, "height": h}

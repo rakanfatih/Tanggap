@@ -13,7 +13,7 @@
 <body>
 
 <div class="app-wrapper">
-    <!-- Overlay Transparan untuk Mobile -->
+    <!-- Overlay Transparan -->
     <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
     <!-- SIDEBAR -->
@@ -32,31 +32,39 @@
     <!-- MAIN CONTENT -->
     <main class="main-content">
         
+        <!-- HEADER BARU -->
         <header class="top-header">
-            <!-- Tombol Hamburger untuk Mobile -->
-            <div class="mobile-toggle" onclick="toggleSidebar()">
-                <i class="fa-solid fa-bars"></i>
+            <div class="d-flex align-items-center gap-3">
+                <div class="header-toggle" onclick="toggleSidebar()" title="Buka Menu">
+                    <i class="fa-solid fa-bars"></i>
+                </div>
+                <h5 class="m-0 fw-bold text-dark d-none d-sm-block">Dashboard Posko Bencana</h5>
             </div>
-            
-            <i class="fa-solid fa-circle-user profile-icon"></i>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-muted fw-medium d-none d-md-block">Halo, Petugas</span>
+                <i class="fa-solid fa-circle-user profile-icon"></i>
+            </div>
         </header>
 
         <!-- STATS CARDS -->
         <div class="stats-container">
             <div class="stat-card card-purple">
-                <i class="fa-solid fa-layer-group position-absolute top-0 start-0 m-3 fs-4 opacity-50"></i>
+                <i class="fa-solid fa-layer-group position-absolute top-0 start-0 m-4 fs-3 opacity-25"></i>
                 <h2>{{ total }}</h2>
-                <p>Total</p>
+                <p>Total Laporan</p>
             </div>
             <div class="stat-card card-yellow">
+                <i class="fa-solid fa-clock position-absolute top-0 start-0 m-4 fs-3 opacity-25"></i>
                 <h2>{{ menunggu }}</h2>
                 <p>Menunggu</p>
             </div>
             <div class="stat-card card-blue">
+                <i class="fa-solid fa-spinner position-absolute top-0 start-0 m-4 fs-3 opacity-25"></i>
                 <h2>{{ diproses }}</h2>
                 <p>Diproses</p>
             </div>
             <div class="stat-card card-green">
+                <i class="fa-solid fa-check-double position-absolute top-0 start-0 m-4 fs-3 opacity-25"></i>
                 <h2>{{ selesai }}</h2>
                 <p>Selesai</p>
             </div>
@@ -64,30 +72,30 @@
 
         <!-- MAP & RECENT REPORTS -->
         <div class="dashboard-grid">
-            <div class="map-container">
+            <div class="map-container shadow-sm border-0">
                 <div id="map"></div>
             </div>
             
-            <div class="recent-reports">
-                <h5>Laporan Terbaru</h5>
+            <div class="recent-reports shadow-sm border-0">
+                <h5 class="fw-bold text-dark"><i class="fa-solid fa-clock-rotate-left text-primary me-2"></i> Laporan Terbaru</h5>
                 {% if laporan %}
                     {% for item in laporan[:5] %}
-                    <!-- Klik untuk geser peta -->
                     <div class="report-item" style="cursor: pointer;" onclick="focusMap({{ item.latitude }}, {{ item.longitude }}, {{ item.id }})">
                         <div class="report-info">
-                            <h6>Laporan #{{ item.id }}</h6>
+                            <h6 class="fw-bold">Laporan #{{ item.id }}</h6>
                             <p>{{ item.pesan }}</p>
                         </div>
                         <div class="report-action">
-                            <a href="/laporan/{{ item.id }}" onclick="event.stopPropagation();"><i class="fa-solid fa-share"></i></a>
+                            <a href="/laporan/{{ item.id }}" onclick="event.stopPropagation();"><i class="fa-solid fa-arrow-right"></i></a>
                         </div>
                     </div>
                     {% endfor %}
                 {% else %}
-                    <!-- Status Kosong (Empty State) -->
-                    <div class="text-center py-4 text-muted">
-                        <i class="fa-solid fa-clipboard-check fa-3x mb-3 text-success opacity-50"></i>
-                        <p class="mb-0">Situasi aman.<br>Belum ada laporan terbaru.</p>
+                    <div class="text-center py-5 text-muted">
+                        <div class="bg-light rounded-circle d-inline-flex p-4 mb-3">
+                            <i class="fa-solid fa-check text-success fa-2x"></i>
+                        </div>
+                        <p class="mb-0 fw-bold">Situasi aman.<br>Belum ada laporan terbaru.</p>
                     </div>
                 {% endif %}
             </div>
@@ -97,11 +105,11 @@
 </div>
 
 <!-- TOAST NOTIFICATION -->
-<div class="toast-container position-fixed bottom-0 end-0 p-3">
-    <div id="laporanToast" class="toast align-items-center text-bg-warning border-0" role="alert" data-bs-delay="3000">
+<div class="toast-container position-fixed bottom-0 end-0 p-4">
+    <div id="laporanToast" class="toast align-items-center text-bg-dark border-0 shadow-lg rounded-4" role="alert" data-bs-delay="3000">
         <div class="d-flex">
-            <div class="toast-body" id="toastBody">Ada laporan baru.</div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            <div class="toast-body fw-bold" id="toastBody">Ada laporan baru.</div>
+            <button type="button" class="btn-close btn-close-white me-3 m-auto" data-bs-dismiss="toast"></button>
         </div>
     </div>
 </div>
@@ -109,7 +117,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-<!-- REAL-TIME POLLING (INTERACTIVE SOFT-REFRESH) -->
+<!-- REAL-TIME POLLING -->
 <script>
 let lastId = {{ laporan[0]["id"] if laporan else 0 }};
 
@@ -131,10 +139,8 @@ async function cekLaporanBaru() {
             const toastBody = document.getElementById("toastBody");
             toastBody.innerHTML = `
                 <div class="d-flex align-items-center justify-content-between w-100">
-                    <span class="fw-bold"><i class="fa-solid fa-bell me-2"></i> Ada ${laporanBaru.length} laporan baru!</span>
-                    <button class="btn btn-sm btn-dark fw-bold ms-3" onclick="location.reload()">
-                        <i class="fa-solid fa-rotate me-1"></i> Muat
-                    </button>
+                    <span><i class="fa-solid fa-bell text-warning me-2"></i> ${laporanBaru.length} laporan baru!</span>
+                    <button class="btn btn-sm btn-primary rounded-pill px-3 ms-3" onclick="location.reload()">Muat Data</button>
                 </div>
             `;
             
@@ -153,7 +159,7 @@ setInterval(cekLaporanBaru, 5000);
 <script> const API_BASE_URL = "{{ api_base }}";</script>
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
 
-<!-- FUNGSI PANNING MAP -->
+<!-- FUNGSI PANNING MAP & TOGGLE SIDEBAR -->
 <script>
     function focusMap(lat, lng, id) {
         if (lat && lng) {
@@ -162,10 +168,7 @@ setInterval(cekLaporanBaru, 5000);
             if (markerObj) markerObj.marker.openPopup();
         }
     }
-</script>
 
-<!-- SCRIPT UNTUK TOGGLE SIDEBAR MOBILE -->
-<script>
     function toggleSidebar() {
         document.querySelector('.sidebar').classList.toggle('active');
         document.querySelector('.sidebar-overlay').classList.toggle('active');

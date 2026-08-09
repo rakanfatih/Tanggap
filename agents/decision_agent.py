@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
 
 class DecisionOutput(BaseModel):
-
     action: str = Field(description="escalate, respond, atau reject")
     eskalasi_posko: bool = Field(description="true jika laporan diteruskan ke dashboard BPBD")
     kategori_laporan: str = Field(description="insiden terverifikasi, perlu tinjauan, atau bukan laporan")
@@ -16,7 +15,7 @@ def make_decision(
     possible_fake: bool | None = None,
     severity: str | None = None,
     object_count: int | None = None
-):
+) -> DecisionOutput:
 
     if validation_score is None:
         validation_score = 0
@@ -122,18 +121,3 @@ def make_decision(
         kategori_laporan="bukan laporan",
         reason="Data validasi belum cukup untuk melakukan eskalasi otomatis."
     )
-
-if __name__ == "__main__":
-
-    hasil = make_decision(
-        intent="lapor_darurat",
-        disaster_type="banjir",
-        validation_score=80,
-        flood_detected=True,
-        vision_confidence=40,
-        possible_fake=False,
-        severity="Tidak Dapat Dipastikan",
-        object_count=0
-    )
-
-    print(hasil.model_dump())

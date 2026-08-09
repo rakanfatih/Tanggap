@@ -1,299 +1,187 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&display=swap');
+
+:root {
+    --brand-bg: #0f172a;       
+    --brand-text: #f8fafc;     
+    --brand-accent: #06b6d4;   
+    --bg-body: #f1f5f9;        
+    --bg-surface: #ffffff;     
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+    --sidebar-width: 250px; /* Lebar sidebar diperkecil */
+}
 
 body {
-    font-family: 'Poppins', sans-serif;
-    background-color: #f8f9fc;
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-body);
+    color: var(--text-main);
+    font-size: 0.9rem; /* Mengecilkan skala teks keseluruhan agar tidak terlihat raksasa */
     margin: 0;
-    padding: 0;
+    overflow-x: hidden;
 }
 
-/* Layout Utama */
-.app-wrapper {
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
-}
+h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', sans-serif; font-weight: 600; }
 
-/* Sidebar styling */
+.app-wrapper { display: flex; min-height: 100vh; position: relative; }
+
+/* === SIDEBAR (INTERAKTIF / OFF-CANVAS) === */
 .sidebar {
-    width: 260px;
-    background-color: #e57e25;
-    /* Efek pattern sederhana */
-    background-image: radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.05) 20%, transparent 20%, transparent 100%), 
-                      radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.05) 20%, transparent 20%, transparent 100%);
-    background-size: 100px 100px;
-    color: white;
+    width: var(--sidebar-width);
+    background-color: var(--brand-bg);
+    position: fixed;
+    height: 100vh;
+    z-index: 1050;
+    left: 0;
+    top: 0;
+    transform: translateX(-100%); 
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 25px rgba(0,0,0,0.15);
     display: flex;
     flex-direction: column;
+    
+    /* Tambahan untuk Akselerasi GPU agar animasi super mulus (60fps) */
+    will-change: transform;
+    backface-visibility: hidden;
 }
+.sidebar.active { transform: translateX(0); }
 
 .sidebar-logo {
-    text-align: center;
-    padding: 30px 0;
+    padding: 1.5rem 1.25rem;
+    display: flex; align-items: center; gap: 0.75rem;
+    color: var(--brand-accent);
+}
+.sidebar-logo h3 { margin: 0; font-weight: 700; color: var(--brand-text); font-size: 1.5rem; }
+
+.nav-menu { list-style: none; padding: 0 0.75rem; margin: 0; }
+.nav-menu li { margin-bottom: 0.25rem; }
+.nav-menu a {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: #94a3b8; text-decoration: none;
+    border-radius: 0.5rem; font-weight: 500;
+    transition: all 0.2s ease;
+}
+.nav-menu a:hover, .nav-menu a.active {
+    background-color: rgba(6, 182, 212, 0.15); color: var(--brand-accent);
 }
 
-.sidebar-logo img {
-    width: 50px;
-    margin-bottom: 10px;
-}
-
-.sidebar-logo h3 {
-    font-weight: 700;
-    letter-spacing: 1px;
-    margin: 0;
-}
-
-.nav-menu {
-    list-style: none;
-    padding: 0;
-    margin: 20px 0;
-}
-
-.nav-menu li a {
-    display: block;
-    padding: 15px 30px;
-    color: rgba(255, 255, 255, 0.8);
-    text-decoration: none;
-    font-size: 16px;
-    transition: all 0.3s ease;
-}
-
-.nav-menu li a:hover, .nav-menu li a.active {
-    color: white;
-    font-weight: 600;
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-.nav-menu li a i {
-    margin-right: 15px;
-    width: 20px;
-    text-align: center;
-}
-
-/* Konten Utama */
-.main-content {
-    flex: 1;
-    padding: 20px 40px;
-    overflow-y: auto;
-}
-
-.top-header {
-    display: flex;
-    justify-content: flex-end;
-    padding: 10px 0 30px 0;
-}
-
-.profile-icon {
-    font-size: 30px;
-    color: #333;
-}
-
-/* Kartu Statistik */
-.stats-container {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-.stat-card {
-    border-radius: 15px;
-    padding: 20px;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    position: relative;
-    overflow: hidden;
-}
-
-.stat-card h2 {
-    font-weight: 700;
-    font-size: 32px;
-    margin: 0;
-    z-index: 1;
-}
-
-.stat-card p {
-    margin: 0;
-    font-weight: 600;
-    font-size: 14px;
-    z-index: 1;
-}
-
-.card-purple { background-color: #c729c1; }
-.card-yellow { background-color: #f7c325; }
-.card-blue { background-color: #7aade7; }
-.card-green { background-color: #55d64d; }
-
-/* Pola latar belakang pada kartu */
-.stat-card::before {
-    content: '';
-    position: absolute;
-    top: -50%; left: -50%;
-    width: 200%; height: 200%;
-    background-image: radial-gradient(circle, rgba(255,255,255,0.1) 10%, transparent 10%);
-    background-size: 20px 20px;
-    transform: rotate(30deg);
-}
-
-/* Grid Peta & Laporan Terbaru */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 30px;
-    margin-bottom: 30px;
-}
-
-.map-container {
-    background: white;
-    border-radius: 20px;
-    padding: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-}
-
-/* PERUBAHAN: Memperbesar Peta karena tidak ada grafik lagi */
-#map {
-    height: 65vh;       /* Dinamis menyesuaikan tinggi layar operator */
-    min-height: 500px;  /* Batas minimal jika layar kecil */
-    border-radius: 15px;
-    z-index: 1;
-}
-
-/* Panel Laporan Terbaru */
-.recent-reports {
-    background-color: #fdf8e6;
-    border-radius: 20px;
-    padding: 25px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    max-height: calc(65vh + 20px); /* Menyamakan tinggi dengan peta */
-    overflow-y: auto; /* Scroll jika laporan lebih dari 5 */
-}
-
-.recent-reports h5 {
-    font-weight: 700;
-    margin-bottom: 20px;
-    color: #333;
-}
-
-.report-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 2px solid #f2e7c4;
-    padding: 15px 0;
-}
-
-.report-item:last-child {
-    border-bottom: none;
-}
-
-.report-info h6 {
-    margin: 0;
-    font-weight: 600;
-    color: #333;
-}
-
-.report-info p {
-    margin: 0;
-    font-size: 12px;
-    color: #777;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 180px;
-}
-
-.report-action a {
-    color: #333;
-    font-size: 20px;
-    text-decoration: none;
-}
-
-/* Tabel Utama */
-.table-container {
-    background: white;
-    padding: 20px;
-    border-radius: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-}
-
-/* =========================================
-   MOBILE RESPONSIVENESS
-========================================= */
-
-/* Tombol Hamburger (Default disembunyikan di PC) */
-.mobile-toggle {
-    display: none;
-    font-size: 24px;
-    color: #333;
-    cursor: pointer;
-    margin-right: auto; /* Mendorong ikon profil ke kanan */
-}
-
-/* Overlay gelap saat sidebar terbuka di mobile */
+/* === OVERLAY TRANSPARAN === */
 .sidebar-overlay {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 999;
+    /* Mengganti display: none menjadi visibility agar animasi opacity berjalan mulus */
+    visibility: hidden; 
+    position: fixed; inset: 0;
+    background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(2px);
+    z-index: 1040; opacity: 0; 
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+.sidebar-overlay.active { 
+    visibility: visible; 
+    opacity: 1; 
 }
 
-.sidebar-overlay.active {
-    display: block;
+/* === MAIN CONTENT === */
+.main-content {
+    flex: 1; width: 100vw;
+    padding: 1.25rem; /* Padding konten utama diperkecil */
+    transition: filter 0.3s;
 }
 
-/* Aturan untuk Layar Tablet & Mobile (di bawah 992px) */
-@media (max-width: 992px) {
-    .stats-container {
-        grid-template-columns: repeat(2, 1fr); /* Menjadi 2 kolom */
-    }
-    .dashboard-grid {
-        grid-template-columns: 1fr; /* Peta & Laporan ditumpuk ke bawah */
-    }
+/* === HEADER NORMAL (Tidak Ikut Scroll) === */
+.top-header {
+    position: static; /* Mengembalikan ke posisi normal (tidak melayang) */
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 1.5rem; 
+    background: var(--bg-surface); 
     
-    #map {
-        height: 400px; /* Kembalikan ke ukuran standar jika di layar sempit agar tidak menutupi seluruh layar */
-    }
+    /* Padding kiri dilebarkan (4.5rem) agar teks tidak tertabrak tombol burger */
+    padding: 0.75rem 1.25rem 0.75rem 4.5rem; 
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 4px rgb(0 0 0 / 0.04);
+    border: 1px solid var(--border-color);
 }
 
-/* Aturan Khusus Layar Smartphone (di bawah 768px) */
-@media (max-width: 768px) {
-    .app-wrapper {
-        position: relative;
-    }
+/* === TOMBOL BURGER MELAYANG (FLOATING BUTTON) === */
+.header-toggle {
+    position: fixed;     /* Membuat tombol lepas dari header dan selalu menempel di layar */
+    top: 1.6rem;         /* Jarak dari atas layar */
+    left: 2rem;          /* Jarak dari kiri layar */
+    z-index: 1040;       /* Pastikan berada di atas tabel/konten, tapi di bawah sidebar */
     
-    /* Sidebar disembunyikan ke kiri */
-    .sidebar {
-        position: fixed;
-        left: -260px;
-        top: 0;
-        bottom: 0;
-        z-index: 1000;
-        transition: left 0.3s ease;
-    }
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; border-radius: 50%;
     
-    /* Class untuk memunculkan sidebar */
-    .sidebar.active {
-        left: 0;
-    }
+    /* Warna aksen cyan agar selalu terlihat jelas */
+    background: var(--brand-accent); 
+    color: #ffffff;
     
-    .mobile-toggle {
-        display: block; /* Munculkan tombol hamburger */
-    }
+    cursor: pointer; font-size: 1.1rem; 
+    box-shadow: 0 4px 10px rgba(6, 182, 212, 0.4);
+    transition: transform 0.2s ease, background 0.2s ease;
+}
 
-    .main-content {
-        padding: 15px; /* Kurangi padding agar lebih lega di HP */
-    }
+.header-toggle:hover { 
+    transform: scale(1.1); /* Efek membesar sedikit saat disentuh mouse */
+    background: #0891b2; 
+}
+.profile-icon { font-size: 1.8rem; color: #cbd5e1; cursor: pointer; }
 
-    .stats-container {
-        grid-template-columns: 1fr; /* Kartu statistik jadi 1 baris ke bawah */
-    }
+/* === CARDS & STATS === */
+.card { background: var(--bg-surface); border: none; border-radius: 0.75rem; box-shadow: 0 2px 4px rgb(0 0 0 / 0.04); }
+.card-header { background: transparent; border-bottom: 1px solid var(--border-color); padding: 1rem 1.25rem; }
+
+.stats-container {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem; margin-bottom: 1.5rem;
+}
+.stat-card {
+    padding: 1.25rem; border-radius: 0.75rem; position: relative;
+    overflow: hidden; color: #fff; display: flex; flex-direction: column;
+    justify-content: center; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    transition: transform 0.2s ease; border: 1px solid rgba(255,255,255,0.1);
+}
+.stat-card:hover { transform: translateY(-3px); }
+.stat-card h2 { font-size: 2rem; margin: 0; font-weight: 700; z-index: 1; }
+.stat-card p { margin: 0; font-size: 0.9rem; font-weight: 500; opacity: 0.9; z-index: 1; }
+
+.card-purple { background: linear-gradient(135deg, #6366f1, #4338ca); }
+.card-yellow { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.card-blue { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
+.card-green { background: linear-gradient(135deg, #10b981, #059669); }
+
+/* === DASHBOARD GRID (MAP & LIST) === */
+.dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; }
+.map-container { 
+    background: var(--bg-surface); border-radius: 0.75rem; overflow: hidden; 
+    height: 420px; /* Tinggi peta dikurangi dari 550px */
+    box-shadow: 0 2px 4px rgb(0 0 0 / 0.04); border: 1px solid var(--border-color); 
+}
+#map { height: 100%; width: 100%; z-index: 1; }
+
+.recent-reports {
+    background: var(--bg-surface); border-radius: 0.75rem; border: 1px solid var(--border-color);
+    padding: 1.25rem; height: 420px; /* Tinggi kotak list laporan dikurangi */
+    overflow-y: auto; box-shadow: 0 2px 4px rgb(0 0 0 / 0.04);
+}
+.report-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;
+    margin-bottom: 0.75rem; transition: all 0.2s; background: #fff;
+}
+.report-item:hover { border-color: var(--brand-accent); background-color: #f8fafc; }
+.report-info h6 { margin: 0 0 0.25rem 0; font-size: 0.95rem; color: var(--text-main); }
+.report-info p { margin: 0; font-size: 0.8rem; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.report-action a {
+    color: var(--brand-accent); background: #e0f2fe; width: 34px; height: 34px; display: flex;
+    align-items: center; justify-content: center; border-radius: 50%; text-decoration: none; transition: background 0.2s;
+}
+.report-action a:hover { background: var(--brand-accent); color: #fff; }
+
+/* === PENYESUAIAN UNTUK LAYAR HP/MOBILE === */
+@media (max-width: 991px) {
+    .dashboard-grid { grid-template-columns: 1fr; }
+    .main-content { padding: 1rem; }
     
-    .top-header {
-        padding: 10px 0 20px 0;
-    }
+    .top-header { padding-left: 4rem; margin-bottom: 1rem; }
+    .header-toggle { top: 1.35rem; left: 1.5rem; } /* Sesuaikan posisi burger di layar kecil */
 }

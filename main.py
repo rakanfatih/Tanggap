@@ -5,8 +5,8 @@ import uvicorn
 import time
 import json
 from dotenv import load_dotenv
-from typing import Optional, List
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Request
+from typing import Optional
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -14,9 +14,18 @@ from sqlalchemy.orm import Session
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+
 from graph_workflow import app as langgraph_app
 from database.database import get_db
-from database.crud import simpan_laporan, get_all_laporan, get_laporan_by_id, update_status, get_chat_history
+from database.models import Laporan
+from database.crud import (
+    simpan_laporan, 
+    get_all_laporan, 
+    get_laporan_by_id, 
+    update_status, 
+    get_chat_history,
+    update_kategori_laporan
+)
 
 load_dotenv(override=True)
 
@@ -32,7 +41,10 @@ app = FastAPI(
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
 os.makedirs("assets_edukasi", exist_ok=True)
 app.mount("/assets", StaticFiles(directory="assets_edukasi"), name="assets")
 
@@ -50,7 +62,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# request model 
+# request & response model
 class LaporanRequest(BaseModel):
     session_id: str = Field(default="default_session", description="ID unik untuk setiap user/perangkat")
     user_message: str = Field(..., description="Pesan yang dikirim warga.")
@@ -58,7 +70,6 @@ class LaporanRequest(BaseModel):
     lon: Optional[float] = Field(default=0.0, description="Longitude GPS.")
     image_path: Optional[str] = Field(default=None, description="Path gambar.")
 
-# response model
 class LaporanResponse(BaseModel):
     intent: str
     disaster_type: str
@@ -69,7 +80,6 @@ class LaporanResponse(BaseModel):
     kategori_laporan: str
     processing_time: float
 
-# dashboard model
 class DashboardLaporan(BaseModel):
     id: int
     waktu: str
@@ -91,31 +101,29 @@ class DashboardLaporan(BaseModel):
     final_response: str
     status: str
 
-# update status mode
 class UpdateStatusRequest(BaseModel):
     status: str
 
 class UpdateKategoriRequest(BaseModel):
     kategori: str
 
-# endpoint
+class EdukasiItem(BaseModel):
+    id: str
+    judul: str
+    deskripsi: str
+    thumbnail: str
+    tipe_konten: str
+    durasi: str
+    file_url: str
+
+
+# API endpoints
 @app.post("/api/lapor", response_model=LaporanResponse)
 @limiter.limit("5/minute")
 async def proses_laporan(
-    request: Request,
     payload: LaporanRequest,
     db: Session = Depends(get_db)
 ):
-
-    print("\n===================================")
-    print("[FASTAPI]")
-    print("===================================")
-
-    print(f"Pesan      : {payload.user_message}")
-    print(f"Latitude   : {payload.lat}")
-    print(f"Longitude  : {payload.lon}")
-    print(f"Image      : {payload.image_path}")
-
     try:
         riwayat = get_chat_history(db, payload.session_id)
 
@@ -132,23 +140,10 @@ async def proses_laporan(
         end_time = time.time()
         latensi = round(end_time - start_time, 2)
 
-        print("\n========== HASIL GRAPH ==========")
-
-        print(f"Latensi         : {latensi} detik")
-        print(f"Intent          : {hasil.get('intent')}")
-        print(f"Disaster Type   : {hasil.get('disaster_type')}")
-        print(f"Confidence      : {hasil.get('confidence')}")
-        print(f"Action          : {hasil.get('action')}")
-        print(f"Kategori        : {hasil.get('kategori_laporan')}")
-        print(f"Eskalasi        : {hasil.get('eskalasi_posko')}")
-        
-        print("=================================\n")
-
         intent_terdeteksi = hasil.get("intent", "lainnya") 
         kategori_terdeteksi = hasil.get("kategori_laporan", "bukan laporan")
 
         if intent_terdeteksi != "lapor_darurat" or kategori_terdeteksi == "bukan laporan":
-            print(f"[INFO] intent adalah '{intent_terdeteksi}'. Kategori: {kategori_terdeteksi}). lewati penyimpanan ke database laporan.")
             return LaporanResponse(
                 intent=intent_terdeteksi,
                 disaster_type=hasil.get("disaster_type", "lainnya"),
@@ -193,7 +188,6 @@ async def proses_laporan(
             }
         )
 
-        print("[DATABASE] Berhasil disimpan")
         return LaporanResponse(
             intent=hasil.get("intent", "lainnya"),
             disaster_type=hasil.get("disaster_type", "lainnya"),
@@ -206,13 +200,9 @@ async def proses_laporan(
         )
 
     except Exception as e:
-        print("\n========== ERROR ==========")
-        print(str(e))
-        print("===========================\n")
-
         raise HTTPException(
             status_code=500,
-            detail=str(e)
+            detail=f"Terjadi kesalahan pada server: {str(e)}"
         )
 
 @app.get("/api/laporan", response_model=list[DashboardLaporan])
@@ -252,7 +242,6 @@ def api_get_laporan(db: Session = Depends(get_db)):
 
     return hasil
 
-
 @app.get("/api/laporan/{laporan_id}", response_model=DashboardLaporan)
 def api_get_laporan_by_id(laporan_id: int, db: Session = Depends(get_db)):
     item = get_laporan_by_id(db, laporan_id)
@@ -281,8 +270,38 @@ def api_get_laporan_by_id(laporan_id: int, db: Session = Depends(get_db)):
         status=item.status
     )
 
+@app.get("/api/riwayat/{session_id}")
+def api_get_riwayat_user(session_id: str, db: Session = Depends(get_db)):
+    histori = (
+        db.query(Laporan)
+        .filter(Laporan.session_id == session_id)
+        .order_by(Laporan.waktu.desc())
+        .all()
+    )
+    
+    hasil = []
+    for item in histori:
+        intent_val = item.router.intent if item.router else "lainnya"
+        if intent_val == "tanya_info":
+            continue
+            
+        hasil.append({
+            "id": item.id,
+            "waktu": item.waktu.strftime("%d-%m-%Y %H:%M"),
+            "pesan": item.pesan,
+            "status": item.status,
+            "kategori_laporan": item.decision.kategori_laporan if item.decision else "bukan laporan",
+            "final_response": item.executor.final_response if item.executor else "Sedang diproses."
+        })
+        
+    return hasil
+
 @app.put("/api/laporan/{laporan_id}/status")
-def api_update_status(laporan_id: int, payload: UpdateStatusRequest, db: Session = Depends(get_db)):
+def api_update_status(
+    laporan_id: int, 
+    payload: UpdateStatusRequest, 
+    db: Session = Depends(get_db)
+):
     laporan = update_status(db, laporan_id, payload.status)
 
     if laporan is None:
@@ -295,7 +314,6 @@ def api_update_status(laporan_id: int, payload: UpdateStatusRequest, db: Session
 
 @app.get("/api/map")
 async def get_map_data(db: Session = Depends(get_db)):
-
     laporan = get_all_laporan(db)
     hasil = []
 
@@ -321,7 +339,6 @@ async def get_map_data(db: Session = Depends(get_db)):
 
 @app.post("/upload-image")
 async def upload_image(image: UploadFile = File(...)):
-
     ext = image.filename.split(".")[-1]
     filename = f"{uuid.uuid4()}.{ext}"
     filepath = os.path.join("uploads", filename)
@@ -334,18 +351,9 @@ async def upload_image(image: UploadFile = File(...)):
         "path": filepath
     }
 
-class EdukasiItem(BaseModel):
-    id: str
-    judul: str
-    deskripsi: str
-    thumbnail: str
-    tipe_konten: str
-    durasi: str
-    file_url: str
-
 SERVER_URL = os.getenv("SERVER_URL", "http://192.168.1.10:8000")
-
 DATA_EDUKASI = []
+
 try:
     with open("edukasi.json", "r", encoding="utf-8") as file:
         RAW_DATA_EDUKASI = json.load(file)
@@ -365,24 +373,23 @@ try:
                     file_url=final_file_url
                 )
             )
-except FileNotFoundError:
-    print("[WARNING] File edukasi.json tidak ditemukan. Data edukasi akan kosong.")
-except json.JSONDecodeError:
-    print("[ERROR] Format edukasi.json salah. Pastikan JSON valid.")
+except Exception:
+    pass
 
 @app.get("/api/edukasi", response_model=list[EdukasiItem])
-def get_semua_edukasi(bencana: Optional[str] = None, fase: Optional[str] = None, tipe: Optional[str] = None):
+def get_semua_edukasi(tipe: Optional[str] = None):
     hasil = DATA_EDUKASI
     
     if tipe and tipe.lower() != "semua":
-        hasil = [item for item in hasil if item.tipe_konten.lower() == tipe.lower()]
+        hasil = [
+            item for item in hasil 
+            if item.tipe_konten.lower() == tipe.lower()
+        ]
         
     return hasil
 
 @app.put("/api/laporan/{laporan_id}/kategori")
 def api_update_kategori(laporan_id: int, payload: UpdateKategoriRequest, db: Session = Depends(get_db)):
-    from database.crud import update_kategori_laporan # import fungsi baru
-    
     laporan = update_kategori_laporan(db, laporan_id, payload.kategori)
 
     if laporan is None:
@@ -393,11 +400,10 @@ def api_update_kategori(laporan_id: int, payload: UpdateKategoriRequest, db: Ses
         "kategori": laporan.decision.kategori_laporan
     }
 
-# run
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True
+        reload=False 
     )

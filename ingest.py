@@ -13,62 +13,62 @@ VECTOR_DB_PATH = BASE_DIR / "vector_db"
 
 load_dotenv()
 
-def clean_text(text):
-    # hapus url
+# data cleaning
+def clean_text(text: str) -> str:
     text = re.sub(r'http\S+|www.\S+', '', text)    
-    # hapus header/footer
     text = re.sub(r'\b(Halaman|Hal|Page)\s*\d+\b', '', text, flags=re.IGNORECASE)    
-    # hapus karakter non ASCII
     text = text.encode('ascii', 'ignore').decode('utf-8')
-    # ganti jeda baris jadi spasi
-    text = re.sub(r'\n+', ' ', text)
-    # ganti spasi ganda  jadi tunggal
     text = re.sub(r'\s+', ' ', text)
-    # hapus spasi kosong awal dan akhir kalimat
     return text.strip()
 
 def create_vector_db():
-    print("1. membaca dokumen ...")
+    print("memulai proses ingestion dokumen...")
     documents = []
 
-    # load file pdf 
-    print(" memuat file pdf ...")
+    # load pdf
     pdf_loader = PyPDFDirectoryLoader("data_knowledge/")
-    documents.extend(pdf_loader.load())
+    pdf_docs = pdf_loader.load()
+    documents.extend(pdf_docs)
+    print(f"berhasil memuat {len(pdf_docs)} halaman PDF.")
 
-    # load file csv
-    print(" memuat file csv ...")
-    csv_files = glob.glob("data_knowledge/*csv")
+    # load csv
+    csv_files = glob.glob("data_knowledge/*.csv")
+    csv_total = 0
     for file in csv_files:
-        # agar simbol kebaca
         csv_loader = CSVLoader(file_path=file, encoding="utf-8")
-        documents.extend(csv_loader.load())
+        rows = csv_loader.load()
+        csv_total += len(rows)
+        documents.extend(rows)
+        
+    print(f"berhasil memuat {csv_total} baris CSV.")
 
-    print(f"total halaman/baris data yang dimuat: {len(documents)}" )
+    if not documents:
+        print("tidak ada dokumen yang ditemukan di folder 'data_knowledge/'.")
+        return
 
-    print(" membersihkan data teks ...")
+    # text cleaning
     for doc in documents:
         doc.page_content = clean_text(doc.page_content)
 
-    print("2. chungking ....")
+    # text splitting
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=200
     )
-    
     chunks = text_splitter.split_documents(documents)
-    print(f"total chunk yang dibuat: {len(chunks)}")
+    print(f"dokumen dipecah menjadi {len(chunks)} chunks.")
 
-    print ("3. membuat vector database ...")
+    # embedding and saving to vector database
+    print("membuat embedding dan menyimpan ke vectorDB (Chroma)...")
     embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-m3")
-
-    vector_store = Chroma.from_documents(
+    
+    Chroma.from_documents(
         documents=chunks,
         embedding=embeddings,
         persist_directory=str(VECTOR_DB_PATH)    
     )
 
-    print("vector db berhasil diperbarui")
+    print(f"vectordb berhasil dibuat di: {VECTOR_DB_PATH}")
 
 if __name__ == "__main__":
     create_vector_db()

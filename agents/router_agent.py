@@ -1,4 +1,3 @@
-import os
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from langchain_groq import ChatGroq
@@ -6,20 +5,22 @@ from langchain_core.prompts import ChatPromptTemplate
 
 load_dotenv()
 
-# output 
+# output schema
 class RouterOutput(BaseModel):
-
     intent: str = Field(description="hanya boleh berisi: lapor_darurat, tanya_info, atau lainnya")
     disaster_type: str = Field(description="jenis bencana: banjir, gempa, longsor, kebakaran, tsunami, angin, kriminalitas, kecelakaan, spam, lainnya")
     confidence: float = Field(description="nilai keyakinan 0 sampai 1")
     alasan: str = Field(description="alasan klasifikasi")
 
-# router agent
-def route_message(user_message: str, chat_history: str = ""):
+# agent function
+def route_message(user_message: str, chat_history: str = "") -> RouterOutput:
+    
+    # inisialisasi model
     llm = ChatGroq(
         model="llama-3.3-70b-versatile",
         temperature=0
     )
+    
     structured_llm = llm.with_structured_output(RouterOutput)
 
     system_prompt = """
@@ -55,23 +56,3 @@ def route_message(user_message: str, chat_history: str = ""):
     })
 
     return result
-
-
-if __name__ == "__main__":
-
-    tests = [
-        "Rumah saya kebanjiran.",
-        "Ada gempa bumi besar.",
-        "Posko dimana?",
-        "Halo",
-        "Tolong air sudah masuk rumah saya.",
-        "Terjadi kebakaran."
-    ]
-
-    for t in tests:
-
-        print("\n====================================")
-        print(t)
-
-        hasil = route_message(t)
-        print(hasil.model_dump())

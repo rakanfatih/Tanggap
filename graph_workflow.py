@@ -1,4 +1,3 @@
-import time
 from typing import TypedDict, Optional
 from langgraph.graph import StateGraph, END
 from agents.router_agent import route_message
@@ -8,7 +7,7 @@ from agents.decision_agent import make_decision
 from agents.executor_agent import execute_response
 from agents.vision_agent import analyze_image
 
-# graph state
+# graph State
 class GraphState(TypedDict):
     # input
     user_message: str
@@ -59,29 +58,12 @@ class GraphState(TypedDict):
     # executor
     final_response: Optional[str]
 
-# router node
+# nodes
 def node_router(state: GraphState):
-    start_time = time.time()
-    print("\n" + "="*50)
-    print("[NODE] ROUTER AGENT")
-    print("-" * 50)
-    print("INPUT DARI USER:")
-    print(f"   - Pesan: {state['user_message']}")
-
     hasil = route_message(
         state["user_message"],
         chat_history=state.get("chat_history")
     )
-
-    latensi = time.time() - start_time
-    print("-" * 50)
-    print("OUTPUT ROUTER AGENT:")
-    print(f"   - Intent        : {hasil.intent}")
-    print(f"   - Disaster Type : {hasil.disaster_type}")
-    print(f"   - Confidence    : {hasil.confidence}")
-    print(f"   - Alasan        : {hasil.alasan}")
-    print(f"    Latensi Node  : {latensi:.2f} detik")
-    print("=" * 50)
 
     return {
         "intent": hasil.intent,
@@ -90,30 +72,12 @@ def node_router(state: GraphState):
         "router_reason": hasil.alasan
     }
 
-# validator node
 def node_validator(state: GraphState):
-    start_time = time.time()
-    print("\n" + "="*50)
-    print("[NODE] VALIDATOR AGENT")
-    print("-" * 50)
-    print("INPUT DARI USER:")
-    print(f"   - Koordinat: [{state.get('lat', 0.0)}, {state.get('lon', 0.0)}]")
-
     hasil = validasi_laporan(
         user_message=state["user_message"],
         lat=state.get("lat", 0.0),
         lon=state.get("lon", 0.0)
     )
-
-    latensi = time.time() - start_time
-    print("-" * 50)
-    print("OUTPUT VALIDATOR AGENT:")
-    print(f"   - Alamat Lengkap: {hasil['alamat_lengkap']}")
-    print(f"   - GPS Valid     : {hasil['gps_valid']}")
-    print(f"   - Cuaca         : {hasil['kategori_hujan']} ({hasil['curah_hujan_mm']} mm)")
-    print(f"   - Val. Score    : {hasil['validation_score']}")
-    print(f"    Latensi Node  : {latensi:.2f} detik")
-    print("=" * 50)
 
     return {
         "validation_score": hasil["validation_score"],
@@ -125,35 +89,12 @@ def node_validator(state: GraphState):
         "poin_cuaca": hasil["poin_cuaca"]
     }
 
-# vision node
 def node_vision(state: GraphState):
-    start_time = time.time()
-    print("\n" + "="*50)
-    print("[NODE] VISION AGENT")
-    print("-" * 50)
-    
     image_path = state.get("image_path")
     if not image_path:
-        print("Tidak ada gambar yang dilampirkan.")
-        print("=" * 50)
         return {}
 
-    print(f"INPUT DARI USER:")
-    print(f"   - Image Path: {image_path}")
-
     hasil = analyze_image(image_path)
-
-    latensi = time.time() - start_time
-    print("-" * 50)
-    print("OUTPUT VISION AGENT:")
-    print(f"   - Flood Detected: {hasil.flood_detected}")
-    print(f"   - Confidence    : {hasil.confidence}")
-    print(f"   - Severity      : {hasil.severity}")
-    print(f"   - Est. Water    : {hasil.estimated_water_cm} cm")
-    print(f"   - Objects Found : {hasil.object_count} {hasil.visible_objects}")
-    print(f"   - Possible Fake : {hasil.possible_fake}")
-    print(f"    Latensi Node  : {latensi:.2f} detik")
-    print("=" * 50)
 
     return {
         "flood_detected": hasil.flood_detected,
@@ -170,47 +111,19 @@ def node_vision(state: GraphState):
         "vision_image_path": hasil.vision_image_path
     }
 
-# retriever node
 def node_retriever(state: GraphState):
-    start_time = time.time()
-    print("\n" + "="*50)
-    print("[NODE] RETRIEVER AGENT")
-    print("-" * 50)
-    print("INPUT DARI USER:")
-    print(f"   - Query: {state['user_message']}")
-
     hasil = retrieve_sop_info(query=state["user_message"])
-
-    latensi = time.time() - start_time
-    print("-" * 50)
-    print("OUTPUT RETRIEVER AGENT:")
-    print(f"   - Total Referensi: {hasil['total_references']}")
-    print(f"    Latensi Node   : {latensi:.2f} detik")
-    print("=" * 50)
 
     return {
         "context": hasil["context"],
         "total_references": hasil["total_references"]
     }
 
-# decision node
 def node_decision(state: GraphState):
-    start_time = time.time()
-    print("\n" + "="*50)
-    print("[NODE] DECISION AGENT")
-    print("-" * 50)
-    print("MENGAMBIL DATA DARI AGENT LAIN:")
-    print(f"   - Intent (Router)       : {state.get('intent')}")
-    print(f"   - Disaster (Router)     : {state.get('disaster_type')}")
-    print(f"   - Val. Score (Validator): {state.get('validation_score')}")
-    print(f"   - Flood Det. (Vision)   : {state.get('flood_detected')}")
-    print(f"   - Vis. Conf. (Vision)   : {state.get('vision_confidence')}")
-    print(f"   - Severity (Vision)     : {state.get('severity')}")
-    print(f"   - Obj. Count (Vision)   : {state.get('object_count')}")
-    print(f"   - Poss. Fake (Vision)   : {state.get('possible_fake')}")
-
     object_count = state.get("object_count", 0)
     flood_detected = state.get("flood_detected", False)
+    
+    # jika ada banjir, tapi tidak ada objek referensi
     eskalasi_paksa = flood_detected and object_count == 0
 
     hasil = make_decision(
@@ -224,17 +137,7 @@ def node_decision(state: GraphState):
         object_count=state.get("object_count")
     )
 
-    reason_final = hasil.reason + (" (Ditambah: Eskalasi paksa karena kedalaman air tidak dapat diverifikasi visual)." if eskalasi_paksa else "")
-
-    latensi = time.time() - start_time
-    print("-" * 50)
-    print("OUTPUT DECISION AGENT:")
-    print(f"   - Action          : {hasil.action}")
-    print(f"   - Eskalasi Posko  : {hasil.eskalasi_posko or eskalasi_paksa}")
-    print(f"   - Kategori Laporan: {hasil.kategori_laporan}")
-    print(f"   - Alasan          : {reason_final}")
-    print(f"    Latensi Node  : {latensi:.2f} detik")
-    print("=" * 50)
+    reason_final = hasil.reason + (" (ditambah: eskalasi paksa karena kedalaman air tidak dapat diverifikasi visual)." if eskalasi_paksa else "")
 
     return {
         "action": hasil.action,
@@ -243,21 +146,7 @@ def node_decision(state: GraphState):
         "decision_reason": reason_final
     }
 
-# executor node
 def node_executor(state: GraphState):
-    start_time = time.time()
-    print("\n" + "="*50)
-    print("[NODE] EXECUTOR AGENT")
-    print("-" * 50)
-    print("MENGAMBIL DATA DARI AGENT LAIN:")
-    print(f"   - Intent (Router)   : {state.get('intent')}")
-    print(f"   - Action (Decision) : {state.get('action')}")
-    print(f"   - Kategori (Decision): {state.get('kategori_laporan')}")
-    print(f"   - Alasan (Decision) : {state.get('decision_reason')}")
-    
-    context_info = "Ada" if state.get("context") else "Tidak Ada (Atau Kosong)"
-    print(f"   - Context (Retriever): {context_info}")
-
     hasil = execute_response(
         user_message=state["user_message"],
         intent=state.get("intent", ""),
@@ -268,18 +157,11 @@ def node_executor(state: GraphState):
         chat_history=state.get("chat_history", "")
     )
 
-    latensi = time.time() - start_time
-    print("-" * 50)
-    print("OUTPUT EXECUTOR AGENT:")
-    print(f"   - Final Response: \n{hasil.final_response}")
-    print(f"    Latensi Node  : {latensi:.2f} detik")
-    print("=" * 50)
-
     return {
         "final_response": hasil.final_response
     }
 
-# routing condition
+# edge routing and workflow compilation
 def router_condition(state: GraphState):
     intent = state["intent"]
     if intent == "lapor_darurat":
@@ -289,7 +171,7 @@ def router_condition(state: GraphState):
     else:
         return "decision"
 
-# build graph
+# build graph  
 workflow = StateGraph(GraphState)
 
 workflow.add_node("router", node_router)
@@ -314,33 +196,3 @@ workflow.add_edge("decision", "executor")
 workflow.add_edge("executor", END)
 
 app = workflow.compile()
-
-# test
-if __name__ == "__main__":
-    
-    print("\nMEMULAI PROSES MULTI-AGENT...\n")
-    
-    start_total = time.time()
-
-    hasil = app.invoke(
-        {
-            "user_message": "Rumah saya kebanjiran.",
-            "lat": -6.200000,
-            "lon": 106.816666,
-            "image_path": "uploads/banjir1.jpg"
-        }
-    )
-
-    end_total = time.time()
-    latensi_total = end_total - start_total
-
-    print("\n" + "="*50)
-    print("HASIL AKHIR GRAPH")
-    print("="*50)
-    for key, value in hasil.items():
-        if key in ["context", "chat_history"] and value:
-            print(f"{key.upper():<20} : [Berisi teks panjang...]")
-        else:
-            print(f"{key.upper():<20} : {value}")
-    print(f"\nTOTAL WAKTU EKSEKUSI : {latensi_total:.2f} detik")
-    print("="*50 + "\n")

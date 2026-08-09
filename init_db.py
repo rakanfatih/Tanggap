@@ -3,4 +3,4 @@ from database.models import Base
 
 Base.metadata.create_all(bind=engine)
 
-print("Database berhasil dibuat.")
+print("database berhasil dibuat.")

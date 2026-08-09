@@ -12,7 +12,7 @@
 <body>
 
 <div class="app-wrapper">
-    <!-- Overlay Transparan untuk Mobile -->
+    <!-- Overlay Transparan -->
     <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
     <!-- SIDEBAR -->
@@ -30,36 +30,41 @@
 
     <!-- MAIN CONTENT -->
     <main class="main-content">
+        <!-- HEADER BARU -->
         <header class="top-header">
-            <!-- Tombol Hamburger untuk Mobile -->
-            <div class="mobile-toggle" onclick="toggleSidebar()">
-                <i class="fa-solid fa-bars"></i>
+            <div class="d-flex align-items-center gap-3">
+                <div class="header-toggle" onclick="toggleSidebar()" title="Buka Menu">
+                    <i class="fa-solid fa-bars"></i>
+                </div>
+                <h5 class="m-0 fw-bold text-dark d-none d-sm-block">Analisis</h5>
             </div>
-
-            <i class="fa-solid fa-circle-user profile-icon"></i>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-muted fw-medium d-none d-md-block">Halo, Petugas</span>
+                <i class="fa-solid fa-circle-user profile-icon"></i>
+            </div>
         </header>
 
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h4 class="m-0 fw-bold text-gray-800"><i class="fa-solid fa-chart-line text-primary me-2"></i> Analisis & Statistik</h4>
+            <h4 class="m-0 fw-bold text-gray-800"><i class="fa-solid fa-chart-line text-primary me-2"></i> Statistik Keseluruhan</h4>
         </div>
 
         <div class="row g-4 mb-4">
             <!-- Tren Waktu Laporan -->
             <div class="col-lg-8">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-header bg-white py-3">
+                <div class="card h-100">
+                    <div class="card-header">
                         <h6 class="m-0 fw-bold text-primary">Tren Laporan Harian</h6>
                     </div>
                     <div class="card-body">
-                        <canvas id="trendChart" height="100"></canvas>
+                        <canvas id="trendChart" height="250"></canvas>
                     </div>
                 </div>
             </div>
             
             <!-- Kategori Laporan -->
             <div class="col-lg-4">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-header bg-white py-3">
+                <div class="card h-100">
+                    <div class="card-header">
                         <h6 class="m-0 fw-bold text-success">Proporsi Kategori Insiden</h6>
                     </div>
                     <div class="card-body d-flex justify-content-center">
@@ -72,24 +77,24 @@
         <div class="row g-4">
             <!-- Objek Terdeteksi -->
             <div class="col-lg-6">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-header bg-white py-3">
-                        <h6 class="m-0 fw-bold text-warning">Objek Paling Sering Terdeteksi (Vision AI)</h6>
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h6 class="m-0 fw-bold text-warning">Objek Paling Sering Terdeteksi</h6>
                     </div>
                     <div class="card-body">
-                        <canvas id="objectChart" height="150"></canvas>
+                        <canvas id="objectChart" height="250"></canvas>
                     </div>
                 </div>
             </div>
 
             <!-- Tingkat Keparahan -->
             <div class="col-lg-6">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-header bg-white py-3">
-                        <h6 class="m-0 fw-bold text-danger">Tingkat Keparahan (Severity)</h6>
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h6 class="m-0 fw-bold text-danger">Tingkat Keparahan</h6>
                     </div>
                     <div class="card-body d-flex justify-content-center">
-                        <canvas id="severityChart" height="150"></canvas>
+                        <canvas id="severityChart" height="250"></canvas>
                     </div>
                 </div>
             </div>
@@ -141,8 +146,8 @@
             datasets: [{
                 label: 'Jumlah Laporan',
                 data: Object.keys(trendData).sort().map(k => trendData[k]),
-                borderColor: '#4e73df',
-                backgroundColor: 'rgba(78, 115, 223, 0.1)',
+                borderColor: '#06b6d4',
+                backgroundColor: 'rgba(6, 182, 212, 0.1)',
                 tension: 0.3,
                 fill: true
             }]
@@ -160,13 +165,13 @@
                     kategoriData["perlu tinjauan"], 
                     kategoriData["bukan laporan"]
                 ],
-                backgroundColor: ['#1cc88a', '#f6c23e', '#858796']
+                backgroundColor: ['#10b981', '#f59e0b', '#94a3b8']
             }]
         },
         options: { responsive: true, maintainAspectRatio: false }
     });
 
-    const sortedObjects = Object.entries(objectData).sort((a,b) => b[1] - a[1]); // Urutkan dari terbanyak
+    const sortedObjects = Object.entries(objectData).sort((a,b) => b[1] - a[1]);
     new Chart(document.getElementById('objectChart'), {
         type: 'bar',
         data: {
@@ -174,7 +179,8 @@
             datasets: [{
                 label: 'Frekuensi Muncul',
                 data: sortedObjects.map(obj => obj[1]),
-                backgroundColor: '#36b9cc'
+                backgroundColor: '#3b82f6',
+                borderRadius: 4
             }]
         },
         options: { responsive: true, maintainAspectRatio: false }
@@ -187,18 +193,15 @@
             datasets: [{
                 data: [severityData["Tinggi"], severityData["Sedang"], severityData["Rendah"]],
                 backgroundColor: [
-                    'rgba(231, 74, 59, 0.7)',
-                    'rgba(246, 194, 62, 0.7)',
-                    'rgba(241, 196, 15, 0.7)'
+                    'rgba(239, 68, 68, 0.8)',
+                    'rgba(245, 158, 11, 0.8)',
+                    'rgba(59, 130, 246, 0.8)'
                 ]
             }]
         },
         options: { responsive: true, maintainAspectRatio: false }
     });
-</script>
 
-<!-- SCRIPT UNTUK TOGGLE SIDEBAR MOBILE -->
-<script>
     function toggleSidebar() {
         document.querySelector('.sidebar').classList.toggle('active');
         document.querySelector('.sidebar-overlay').classList.toggle('active');

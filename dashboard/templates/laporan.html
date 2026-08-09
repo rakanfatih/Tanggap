@@ -6,17 +6,24 @@
     <title>Daftar Laporan - BPBD Tanggap</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- TAMBAHAN: DataTables CSS -->
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    
     <script src="https://cdn.sheetjs.com/xlsx-0.18.5/package/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        /* Modern DataTables Tweaks untuk tampilan Compact */
+        table.dataTable tbody tr { background-color: #fff; transition: background-color 0.2s; }
+        table.dataTable tbody tr:hover { background-color: #f8fafc; }
+        div.dataTables_wrapper div.dataTables_filter input { border-radius: 0.5rem; border: 1px solid #e2e8f0; padding: 0.4rem 0.8rem; }
+        .table>:not(caption)>*>* { border-bottom-color: #f1f5f9; padding: 0.75rem 1rem; }
+        .dataTables_info, .dataTables_paginate { margin-top: 1rem; font-size: 0.85rem; }
+    </style>
 </head>
 <body>
 
 <div class="app-wrapper">
-    <!-- Overlay Transparan untuk Mobile -->
+    <!-- Overlay Transparan -->
     <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
     <!-- SIDEBAR -->
@@ -34,59 +41,66 @@
 
     <!-- MAIN CONTENT -->
     <main class="main-content">
+        <!-- HEADER NORMAL (Sesuai dengan CSS baru) -->
         <header class="top-header">
-            <!-- Tombol Hamburger untuk Mobile -->
-            <div class="mobile-toggle" onclick="toggleSidebar()">
+            <!-- Tombol Burger Melayang ditaruh di sini, CSS akan membuatnya Fixed -->
+            <div class="header-toggle" onclick="toggleSidebar()" title="Buka Menu">
                 <i class="fa-solid fa-bars"></i>
             </div>
-            <i class="fa-solid fa-circle-user profile-icon"></i>
+            
+            <div class="d-flex align-items-center">
+                <h5 class="m-0 fw-bold text-dark d-none d-sm-block">Manajemen Laporan</h5>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-muted fw-medium d-none d-md-block">Halo, Petugas</span>
+                <i class="fa-solid fa-circle-user profile-icon"></i>
+            </div>
         </header>
 
         <!-- REKAPITULASI SECTION -->
-        <h4 class="mb-3 fw-bold text-gray-800">Rekapitulasi Laporan</h4>
         <div class="stats-container mb-4">
             <div class="stat-card card-purple shadow-sm" style="cursor: pointer;" onclick="filterDariCard('')" title="Tampilkan Semua">
-                <i class="fa-solid fa-folder-open position-absolute top-0 start-0 m-3 fs-3 opacity-50"></i>
+                <i class="fa-solid fa-folder-open position-absolute top-0 start-0 m-4 fs-3 opacity-25"></i>
                 <h2>{{ total }}</h2>
                 <p>Total Laporan</p>
             </div>
             <div class="stat-card card-yellow shadow-sm" style="cursor: pointer;" onclick="filterDariCard('Menunggu')" title="Filter: Menunggu">
-                <i class="fa-solid fa-clock-rotate-left position-absolute top-0 start-0 m-3 fs-3 opacity-50"></i>
+                <i class="fa-solid fa-clock position-absolute top-0 start-0 m-4 fs-3 opacity-25"></i>
                 <h2>{{ menunggu }}</h2>
                 <p>Menunggu</p>
             </div>
             <div class="stat-card card-blue shadow-sm" style="cursor: pointer;" onclick="filterDariCard('Diproses')" title="Filter: Diproses">
-                <i class="fa-solid fa-truck-fast position-absolute top-0 start-0 m-3 fs-3 opacity-50"></i>
+                <i class="fa-solid fa-spinner position-absolute top-0 start-0 m-4 fs-3 opacity-25"></i>
                 <h2>{{ diproses }}</h2>
                 <p>Diproses</p>
             </div>
             <div class="stat-card card-green shadow-sm" style="cursor: pointer;" onclick="filterDariCard('Selesai')" title="Filter: Selesai">
-                <i class="fa-solid fa-check-double position-absolute top-0 start-0 m-3 fs-3 opacity-50"></i>
+                <i class="fa-solid fa-check-double position-absolute top-0 start-0 m-4 fs-3 opacity-25"></i>
                 <h2>{{ selesai }}</h2>
                 <p>Selesai</p>
             </div>
         </div>
 
         <!-- FULL TABLE SECTION -->
-        <div class="table-container shadow-sm border-0">
+        <div class="card p-4 border-0 shadow-sm">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5 class="m-0 fw-bold text-gray-800"><i class="fa-solid fa-list text-primary me-2"></i>Daftar Lengkap Laporan</h5>
+                <h5 class="m-0 fw-bold text-dark"><i class="fa-solid fa-list text-primary me-2"></i>Daftar Lengkap Laporan</h5>
                 
-                <button onclick="downloadExcel()" class="btn btn-success btn-sm shadow-sm fw-bold">
-                    <i class="fa-solid fa-file-excel me-2"></i>Download Excel
+                <button onclick="downloadExcel()" class="btn btn-success rounded-pill px-4 shadow-sm fw-bold">
+                    <i class="fa-solid fa-file-excel me-2"></i>Export Excel
                 </button>
             </div>
             
             <!-- Filter & Search -->
-            <div class="row mb-4 g-2">
+            <div class="row mb-4 g-3">
                 <div class="col-md-6">
                     <div class="input-group">
-                        <span class="input-group-text bg-white text-muted border-end-0"><i class="fa-solid fa-magnifying-glass"></i></span>
-                        <input type="text" id="customSearchInput" class="form-control border-start-0" placeholder="Cari ID, status, atau kategori...">
+                        <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                        <input type="text" id="customSearchInput" class="form-control bg-light border-start-0" placeholder="Cari ID, status, atau pesan...">
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <select id="customStatusFilter" class="form-select text-secondary">
+                    <select id="customStatusFilter" class="form-select bg-light text-dark fw-medium">
                         <option value="">Semua Status</option>
                         <option value="Menunggu">Menunggu</option>
                         <option value="Diproses">Diproses</option>
@@ -94,7 +108,7 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <select id="customKategoriFilter" class="form-select text-secondary">
+                    <select id="customKategoriFilter" class="form-select bg-light text-dark fw-medium">
                         <option value="">Semua Kategori</option>
                         <option value="insiden terverifikasi">Insiden Terverifikasi</option>
                         <option value="perlu tinjauan">Perlu Tinjauan</option>
@@ -105,25 +119,25 @@
 
             <!-- Tabel Data -->
             <div class="table-responsive">
-                <table id="laporanDataTable" class="table table-hover align-middle border" style="width:100%">
-                    <thead class="table-light text-muted">
+                <table id="laporanDataTable" class="table table-hover align-middle border-0" style="width:100%">
+                    <thead class="text-muted bg-light">
                         <tr>
-                            <th class="text-center" width="5%">ID</th>
+                            <th class="text-center rounded-start" width="5%">ID</th>
                             <th width="20%">Waktu</th>
                             <th width="20%">Status</th>
-                            <th width="35%">Kategori (AI vs Operator)</th>
-                            <th class="text-center" width="10%">Aksi</th>
+                            <th width="35%">Kategori</th>
+                            <th class="text-center rounded-end" width="10%">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                     {% for item in laporan %}
                         <tr>
                             <td class="text-center fw-bold text-primary">#{{ item.id }}</td>
-                            <td class="text-secondary" data-order="{{ item.waktu }}"><i class="fa-regular fa-calendar me-2"></i>{{ item.waktu }}</td>
+                            <td class="text-muted" data-order="{{ item.waktu }}"><i class="fa-regular fa-calendar me-2"></i>{{ item.waktu }}</td>
                             
                             <td data-search="{{ item.status }}">
                                 <form action="/update-status/{{ item.id }}" method="POST" class="m-0">
-                                    <select name="status" class="form-select form-select-sm shadow-none {% if item.status == 'Selesai' %}border-success text-success fw-bold{% elif item.status == 'Diproses' %}border-primary text-primary fw-bold{% else %}border-warning text-dark fw-bold{% endif %}" onchange="this.form.submit()">
+                                    <select name="status" class="form-select form-select-sm shadow-none border-0 rounded-pill {% if item.status == 'Selesai' %}text-success bg-success bg-opacity-10 fw-bold{% elif item.status == 'Diproses' %}text-primary bg-primary bg-opacity-10 fw-bold{% else %}text-dark bg-warning bg-opacity-10 fw-bold{% endif %}" onchange="this.form.submit()">
                                         <option value="Menunggu" {% if item.status=="Menunggu" %}selected{% endif %}>Menunggu</option>
                                         <option value="Diproses" {% if item.status=="Diproses" %}selected{% endif %}>Diproses</option>
                                         <option value="Selesai" {% if item.status=="Selesai" %}selected{% endif %}>Selesai</option>
@@ -131,10 +145,9 @@
                                 </form>
                             </td>
                             
-                            <!-- INTERVENSI OPERATOR PADA KATEGORI AI -->
                             <td data-search="{{ item.kategori_laporan }}">
                                 <form action="/update-kategori/{{ item.id }}" method="POST" class="m-0">
-                                    <select name="kategori" class="form-select form-select-sm shadow-none {% if item.kategori_laporan == 'insiden terverifikasi' %}border-success text-success fw-bold bg-success bg-opacity-10{% elif item.kategori_laporan == 'perlu tinjauan' %}border-warning text-dark fw-bold bg-warning bg-opacity-10{% else %}border-secondary text-secondary fw-bold bg-secondary bg-opacity-10{% endif %}" onchange="this.form.submit()">
+                                    <select name="kategori" class="form-select form-select-sm shadow-none border-0 rounded-pill {% if item.kategori_laporan == 'insiden terverifikasi' %}text-success bg-success bg-opacity-10 fw-bold{% elif item.kategori_laporan == 'perlu tinjauan' %}text-warning bg-warning bg-opacity-10 fw-bold{% else %}text-secondary bg-secondary bg-opacity-10 fw-bold{% endif %}" onchange="this.form.submit()">
                                         <option value="insiden terverifikasi" {% if item.kategori_laporan == "insiden terverifikasi" %}selected{% endif %}>Terverifikasi (Valid)</option>
                                         <option value="perlu tinjauan" {% if item.kategori_laporan == "perlu tinjauan" %}selected{% endif %}>Perlu Tinjauan</option>
                                         <option value="bukan laporan" {% if item.kategori_laporan == "bukan laporan" %}selected{% endif %}>Bukan Laporan (Tolak)</option>
@@ -143,7 +156,7 @@
                             </td>
                             
                             <td class="text-center">
-                                <a href="/laporan/{{ item.id }}" class="btn btn-sm btn-light border text-primary" title="Lihat Detail">
+                                <a href="/laporan/{{ item.id }}" class="btn btn-sm btn-light text-primary rounded-circle" title="Lihat Detail" style="width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center;">
                                     <i class="fa-solid fa-arrow-up-right-from-square"></i>
                                 </a>
                             </td>
@@ -157,13 +170,13 @@
 </div>
 
 <!-- TOAST NOTIFICATION -->
-<div class="toast-container position-fixed bottom-0 end-0 p-3">
-    <div id="laporanToast" class="toast align-items-center text-bg-warning border-0" role="alert">
+<div class="toast-container position-fixed bottom-0 end-0 p-4">
+    <div id="laporanToast" class="toast align-items-center text-bg-dark border-0 shadow-lg rounded-4" role="alert">
         <div class="d-flex">
             <div class="toast-body fw-bold" id="toastBody">
                 <!-- Akan diisi otomatis oleh JS -->
             </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            <button type="button" class="btn-close btn-close-white me-3 m-auto" data-bs-dismiss="toast"></button>
         </div>
     </div>
 </div>
@@ -184,7 +197,7 @@ $(document).ready(function() {
         "dom": '<"row"<"col-sm-12"tr>><"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>', 
         "language": {
             "emptyTable": "Tidak ada laporan yang tersedia",
-            "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ laporan",
+            "info": " _START_ dari _TOTAL_ ",
             "infoEmpty": "Menampilkan 0 laporan",
             "paginate": {
                 "next": "Selanjutnya",
@@ -209,12 +222,12 @@ $(document).ready(function() {
         $('#customStatusFilter').val(statusValue).trigger('change');
         $('#customSearchInput').val('').trigger('keyup');
         $('#customKategoriFilter').val('').trigger('change');
-        document.querySelector('.table-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.querySelector('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 });
 </script>
 
-<!-- REAL-TIME POLLING AUTO REFRESH (SOFT-REFRESH) -->
+<!-- REAL-TIME POLLING AUTO REFRESH -->
 <script>
 let lastId = {{ laporan[0]["id"] if laporan else 0 }};
 async function cekLaporanBaru(){
@@ -235,10 +248,8 @@ async function cekLaporanBaru(){
             const toastBody = document.getElementById("toastBody");
             toastBody.innerHTML = `
                 <div class="d-flex align-items-center justify-content-between w-100">
-                    <span class="fw-bold"><i class="fa-solid fa-bell me-2"></i> Ada ${laporanBaru.length} laporan baru!</span>
-                    <button class="btn btn-sm btn-dark fw-bold ms-3" onclick="location.reload()">
-                        <i class="fa-solid fa-rotate me-1"></i> Muat
-                    </button>
+                    <span><i class="fa-solid fa-bell text-warning me-2"></i> ${laporanBaru.length} laporan baru!</span>
+                    <button class="btn btn-sm btn-primary rounded-pill px-3 ms-3" onclick="location.reload()">Muat Data</button>
                 </div>
             `;
             
@@ -297,14 +308,11 @@ function downloadExcel() {
     const date = new Date().toISOString().split('T')[0];
     XLSX.writeFile(workbook, `Rekapitulasi_Laporan_Banjir_${date}.xlsx`);
 }
-</script>
 
-<!-- SCRIPT UNTUK TOGGLE SIDEBAR MOBILE -->
-<script>
-    function toggleSidebar() {
-        document.querySelector('.sidebar').classList.toggle('active');
-        document.querySelector('.sidebar-overlay').classList.toggle('active');
-    }
+function toggleSidebar() {
+    document.querySelector('.sidebar').classList.toggle('active');
+    document.querySelector('.sidebar-overlay').classList.toggle('active');
+}
 </script>
 </body>
 </html>

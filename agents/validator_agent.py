@@ -1,4 +1,3 @@
-import os
 import requests
 from dotenv import load_dotenv
 
@@ -8,7 +7,7 @@ HEADERS = {
     "User-Agent": "Tanggap-BPBD/1.0 (rakanfatih01@gmail.com)"
 }
 
-# cek cuaaca  
+# helper functions
 def cek_cuaca_aktual(lat: float, lon: float):
     url = (
         "https://api.open-meteo.com/v1/forecast"
@@ -41,14 +40,13 @@ def cek_cuaca_aktual(lat: float, lon: float):
         }
 
     except Exception as e:
-        print(f"[VALIDATOR] Error cuaca Open-Meteo: {e}")
+        print(f"gagal mengambil data cuaca Open-Meteo: {e}")
         return {
             "weather": "Tidak diketahui",
             "temperature": None,
             "curah_hujan_mm": 0.0
         }
 
-# cek lokasi 
 def cek_lokasi_aktual(lat: float, lon: float):
     url = (
         "https://nominatim.openstreetmap.org/reverse"
@@ -68,7 +66,7 @@ def cek_lokasi_aktual(lat: float, lon: float):
         return {"address": alamat, "gps_valid": True}
 
     except Exception as e:
-        print(f"[VALIDATOR] Error lokasi: {e}")
+        print(f"gagal mengambil data lokasi Nominatim: {e}")
         return {"address": "lokasi tidak diketahui", "gps_valid": False}
 
 def koordinat_valid(lat, lon):
@@ -79,15 +77,13 @@ def koordinat_valid(lat, lon):
     LON_MIN, LON_MAX = 106.680000, 106.980000
 
     if not (LAT_MIN <= lat <= LAT_MAX) or not (LON_MIN <= lon <= LON_MAX):
-        print(f"[VALIDATOR] Koordinat {lat}, {lon} berada di luar wilayah Jakarta.")
         return False
 
     return True
 
-# klasifikasi hujan, source: https://jdih.bmkg.go.id/storage/common/dokumen/2023sopbmkg025.pdf
 def klasifikasi_hujan_bmkg(curah_hujan_mm: float):
     if curah_hujan_mm < 0.5:
-        return "Tidak Hujan / Sangat Ringan", 0
+        return "Tidak Hujan", 0
     elif 0.5 <= curah_hujan_mm < 20:
         return "Hujan Ringan", 10
     elif 20 <= curah_hujan_mm < 50:
@@ -99,7 +95,6 @@ def klasifikasi_hujan_bmkg(curah_hujan_mm: float):
     else:
         return "Hujan Ekstrem", 50
 
-# scoring  
 def hitung_validation_score(gps_valid: bool, address: str, skor_hujan: int):
     score = 0
 
@@ -113,7 +108,7 @@ def hitung_validation_score(gps_valid: bool, address: str, skor_hujan: int):
 
     return min(score, 100)
 
-# validator
+# agent function
 def validasi_laporan(user_message: str, lat: float, lon: float):
     gps_valid = koordinat_valid(lat, lon)
     hasil_cuaca = cek_cuaca_aktual(lat, lon)
@@ -121,9 +116,14 @@ def validasi_laporan(user_message: str, lat: float, lon: float):
     if gps_valid:
         hasil_lokasi = cek_lokasi_aktual(lat, lon)
     else:
-        hasil_lokasi = {"address": "koordinat tidak valid", "gps_valid": False}
+        hasil_lokasi = {
+            "address": "koordinat tidak valid", 
+            "gps_valid": False
+        }
 
-    kategori_hujan, skor_hujan = klasifikasi_hujan_bmkg(hasil_cuaca["curah_hujan_mm"])
+    kategori_hujan, skor_hujan = klasifikasi_hujan_bmkg(
+        hasil_cuaca["curah_hujan_mm"]
+    )
 
     validation_score = hitung_validation_score(
         gps_valid=hasil_lokasi["gps_valid"],
@@ -133,7 +133,7 @@ def validasi_laporan(user_message: str, lat: float, lon: float):
 
     hasil = {
         "pesan_asli": user_message,
-        "koordinat": {"latitude": lat,"longitude": lon},
+        "koordinat": {"latitude": lat, "longitude": lon},
         "alamat_lengkap": hasil_lokasi["address"],
         "gps_valid": hasil_lokasi["gps_valid"],
         "suhu": hasil_cuaca["temperature"],
@@ -144,15 +144,3 @@ def validasi_laporan(user_message: str, lat: float, lon: float):
     }
 
     return hasil
-
-if __name__ == "__main__":
-    import json
-    
-    hasil = validasi_laporan(
-        user_message="Air sungai meluap parah.",
-        lat=-6.200000,
-        lon=106.816666
-    )
-
-    print("\n===== OUTPUT VALIDATOR (KLASIFIKASI BMKG) =====")
-    print(json.dumps(hasil, indent=4))

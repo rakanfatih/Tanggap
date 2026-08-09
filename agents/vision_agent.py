@@ -1,7 +1,6 @@
 import os
 import base64
 import json
-import shutil
 import re
 import cv2
 from dotenv import load_dotenv
@@ -18,12 +17,12 @@ from vision.image_validator import validate_image
 
 load_dotenv()
 
-
+# helper functions
 def encode_image(image_path: str, max_size: int = 800):
     img = cv2.imread(image_path)
 
     if img is None:
-        raise ValueError(f"Gagal membaca gambar di {image_path}")
+        raise ValueError(f"gagal membaca gambar di {image_path}")
 
     h, w = img.shape[:2]
 
@@ -34,7 +33,6 @@ def encode_image(image_path: str, max_size: int = 800):
     _, buffer = cv2.imencode('.jpg', img, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
 
     return base64.b64encode(buffer).decode('utf-8')
-
 
 def _extract_text_content(content) -> str:
     if content is None:
@@ -59,13 +57,11 @@ def _extract_text_content(content) -> str:
 
     return str(content).strip()
 
-
 def _strip_think_tags(text: str) -> str:
     cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
     if "<think>" in cleaned and "</think>" not in cleaned:
         cleaned = cleaned.split("<think>")[0]
     return cleaned.strip()
-
 
 def _extract_balanced_json(text: str) -> str | None:
     start = text.find("{")
@@ -99,18 +95,17 @@ def _extract_balanced_json(text: str) -> str | None:
 
     return None  
 
-
 def _clean_json_text(json_str: str) -> str:
     json_str = re.sub(r",\s*([}\]])", r"\1", json_str)
     return json_str
 
-
+# agent function
 def analyze_image(image_path: str) -> VisionOutput:
 
     try:
-        val_result = validate_image(image_path)
+        validate_image(image_path)
     except Exception as e:
-        print(f"[VISION] Gambar ditolak oleh sistem lokal: {e}")
+        print(f"gambar ditolak oleh sistem lokal: {e}")
         return VisionOutput(
             flood_detected=False,
             confidence=0.0,
@@ -122,7 +117,7 @@ def analyze_image(image_path: str) -> VisionOutput:
             object_count=0,
             image_quality="Buruk",
             possible_fake=True,
-            reason=f"Validasi lokal gagal: {str(e)}",
+            reason=f"validasi lokal gagal: {str(e)}",
             vision_image_path=None
         )
 
@@ -142,7 +137,7 @@ def analyze_image(image_path: str) -> VisionOutput:
     base64_image = encode_image(image_path)
 
     system_instructions = """
-        Kamu adalah Vision Agent ahli analisis bencana banjir untuk BPBD.
+        Kamu adalah Vision Agent ahli analisis bencana banjir untuk BPBD, yang bekerja mengadaptasi metodologi FloodDepth-GPT.
     
         [SANGAT PENTING - ATURAN FORMAT]: 
         1. DILARANG KERAS menggunakan tag <think> atau menjabarkan proses berpikirmu.
@@ -154,7 +149,7 @@ def analyze_image(image_path: str) -> VisionOutput:
             "flood_detected": true,
             "visible_objects": ["objek1", "objek2"],
             "object_count": 5,
-            "reason": "Jelaskan DAHULU observasi ketinggian air terhadap objek referensi yang terlihat di gambar berdasarkan panduan metrik tinggi. Jelaskan rasionya dengan singkat (Maks 2 kalimat).",
+            "reason": "Jelaskan proses estimasi kedalaman air berdasarkan tinggi air terhadap berbagai bagian fitur referensi. Berikan estimasi dalam meter di sini.",
             "estimated_water_cm": 50.0,
             "confidence": 0.95,
             "severity": "Tinggi" | "Sedang" | "Rendah" | "Tidak Terdeteksi",
@@ -165,17 +160,18 @@ def analyze_image(image_path: str) -> VisionOutput:
         }
 
         PANDUAN ESTIMASI KEDALAMAN (METRIK REFERENSI):
-        Gunakan ukuran objek berikut sebagai referensi mutlak untuk menghitung tinggi air:
-        - MANUSIA: Pria (Lutut: 40cm, Pinggang: 90cm, Pundak: 140cm, Total: 175cm). Wanita (Lutut: 40cm, Pinggang: 80cm, Pundak: 140cm, Total: 160cm).
-        - SEDAN: Ground clearance 20cm, dasar pintu 60cm, kap mesin 100cm, atap 140cm.
-        - TRUK: Ground clearance 50cm, dasar pintu 80cm, kap mesin 130cm, atap 180cm.
-        - SUV: Ground clearance 30cm, dasar pintu 70cm, kap mesin 100cm, atap 170cm.
-        - RAMBU LALU LINTAS: Tinggi total termasuk tiang 290cm, ukuran rambu di atas 90cm.
+        Dalam memperkirakan kedalaman air banjir, pertimbangkan metrik tinggi untuk fitur umum berikut:
+        - Untuk MANUSIA, pertimbangkan metrik ini: Pria (Tinggi total = 1.75m, Tinggi lutut = 0.4m, Tinggi pinggang = 0.9m, Tinggi pundak = 1.4m); Wanita (Tinggi total = 1.60m, Tinggi lutut = 0.4m, Tinggi pinggang = 0.8m, Tinggi pundak = 1.4m).
+        - Untuk SEDAN, pertimbangkan metrik ini: tinggi keseluruhan dari tanah ke atap adalah 1.4m, ground clearance sekitar 0.2m, tinggi dari tanah ke dasar pintu adalah 0.6m, tinggi dari tanah ke atas kap mesin adalah 1.0m, dan tinggi dari tanah ke dasar jendela adalah 0.8m.
+        - Untuk TRUK, pertimbangkan metrik ini: tinggi keseluruhan dari tanah ke atap adalah 1.8m, ground clearance sekitar 0.5m, tinggi dari tanah ke dasar pintu adalah 0.8m, tinggi dari tanah ke atas kap mesin adalah 1.3m, tinggi dari tanah ke dasar jendela adalah 1.4m.
+        - Untuk SUV, pertimbangkan metrik ini: tinggi keseluruhan dari tanah ke atap adalah 1.7m, ground clearance sekitar 0.3m, tinggi dari tanah ke dasar pintu adalah 0.7m, tinggi dari tanah ke atas kap mesin adalah 1.0m.
+        - Untuk BUS, pertimbangkan metrik ini: tinggi keseluruhan dari tanah ke atap adalah 3.2m, ground clearance sekitar 0.7m, tinggi dari tanah ke dasar pintu adalah 1.0m, tinggi dari tanah ke dasar jendela adalah 2.0m.
+        - Untuk RAMBU JALAN (termasuk tanda berhenti/stop), dimensi tanda stop (segi delapan merah) adalah 0.9m kali 0.9m, sedangkan ukuran vertikal dari tanah ke atas tanda stop, yang menunjukkan tinggi total papan tanda termasuk tiang adalah 2.9m. Hindari pantulan tanda stop di air. Gunakan juga fitur lain sebagai referensi sekunder.
         
         ATURAN ESTIMASI:
-        1. Identifikasi objek referensi yang terendam.
-        2. Bandingkan batas air dengan letak anatomi/bagian kendaraan tersebut berdasarkan angka di atas.
-        3. Hasilkan angka diskrit untuk estimated_water_cm, bukan rentang.
+        1. Berdasarkan tinggi air terhadap bagian-bagian dari setiap fitur referensi di atas, perkirakan kedalaman air.
+        2. Berikan estimasi sebagai angka diskrit dan bukan interval (rentang).
+        3. WAJIB mengonversi hasil akhir kedalaman (meter) ke dalam format centimeter (cm) pada parameter "estimated_water_cm" di objek JSON.
 
         ATURAN SEVERITY:
         - "Tinggi": Air >100 cm.
@@ -206,7 +202,6 @@ def analyze_image(image_path: str) -> VisionOutput:
     raw_text = ""  
 
     try:
-        print("[VISION] Sedang memproses gambar via Qwen...")
         try:
             response = llm.invoke([message])
         except Exception as api_err:
@@ -217,14 +212,13 @@ def analyze_image(image_path: str) -> VisionOutput:
                 failed_generation = (error_body.get("error") or {}).get("failed_generation", "") or ""
 
             if is_groq_bad_request or failed_generation:
-                print(f"[VISION] Groq menolak request (400 json_validate_failed): {api_err}")
+                print(f"groq menolak request (400 json_validate_failed): {api_err}")
                 if failed_generation:
-                    print(f"[VISION] failed_generation dari Groq: {failed_generation[:500]}")
                     raw_text = failed_generation
                     response = None 
                 else:
                     raise ValueError(
-                        "Groq menolak generation (400 json_validate_failed) dan tidak "
+                        "groq menolak generation (400 json_validate_failed) dan tidak "
                         "ada failed_generation untuk dipulihkan."
                     ) from api_err
             else:
@@ -237,12 +231,10 @@ def analyze_image(image_path: str) -> VisionOutput:
             raw_text = _extract_text_content(response.content)
 
         if not raw_text:
-            raise ValueError("Konten teks kosong setelah normalisasi response.content.")
+            raise ValueError("konten teks kosong setelah normalisasi response.content.")
 
         raw_text = _strip_think_tags(raw_text)
-
         raw_text = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_text.strip())
-
         json_str = _extract_balanced_json(raw_text)
 
         if json_str:
@@ -254,12 +246,9 @@ def analyze_image(image_path: str) -> VisionOutput:
             if isinstance(data_dict.get("possible_fake"), str):
                 data_dict["possible_fake"] = data_dict["possible_fake"].lower() == "true"
         else:
-            print("[VISION] Warning: Model tidak mengeluarkan JSON murni (terpotong). "
-                "Melakukan ekstraksi fallback dari teks mentah...")
-            print(f"[VISION] Raw text (untuk debug): {raw_text[:500]}")
+            print("model tidak mengeluarkan JSON murni. melakukan ekstraksi fallback...")
 
             is_flood = "flooded" in raw_text.lower() or "banjir" in raw_text.lower() or "water" in raw_text.lower()
-
             data_dict = {
                 "flood_detected": is_flood,
                 "confidence": 0.85 if is_flood else 0.1,
@@ -278,8 +267,7 @@ def analyze_image(image_path: str) -> VisionOutput:
         hasil = VisionOutput(**data_dict)
 
     except json.JSONDecodeError as e:
-        print(f"[VISION] JSON tidak valid: {e}")
-        print(f"[VISION] Raw text (untuk debug): {raw_text[:1000]}")
+        print(f"[VISION ERROR] JSON tidak valid: {e}")
         hasil = VisionOutput(
             flood_detected=False,
             confidence=0.0,
@@ -294,8 +282,7 @@ def analyze_image(image_path: str) -> VisionOutput:
             reason=f"JSON dari API tidak valid: {str(e)}"
         )
     except Exception as e:
-        print(f"[VISION] Warning/Error saat parsing LLM: {e}")
-        print(f"[VISION] Raw text (untuk debug): {raw_text[:1000]}")
+        print(f"gagal memproses/parsing JSON dari API: {e}")
         hasil = VisionOutput(
             flood_detected=False,
             confidence=0.0,
@@ -307,9 +294,8 @@ def analyze_image(image_path: str) -> VisionOutput:
             object_count=0,
             image_quality="Buruk",
             possible_fake=True,
-            reason=f"Gagal memproses/parsing JSON dari API: {str(e)}"
+            reason=f"gagal memproses/parsing JSON dari API: {str(e)}"
         )
 
     hasil.vision_image_path = None
-
     return hasil
