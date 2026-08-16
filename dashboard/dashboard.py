@@ -1,28 +1,65 @@
 import os
 import json
 import requests
+from functools import wraps
 from flask import (
     Flask,
     render_template,
     redirect,
     request,
     url_for,
-    abort
+    abort,
+    session
 )
-from dotenv import load_dotenv, find_dotenv
+from dotenv import load_dotenv
 
 load_dotenv(override=True)
     
 app = Flask(__name__)
+app.secret_key = "rahasia_skripsi_tangguh"
 
-API_BASE = os.getenv("FASTAPI_URL", "http://10.103.83.134:8000")
+API_BASE = os.getenv("FASTAPI_URL", "http://127.0.0.1:8000")
 API_URL = f"{API_BASE}/api"
-print("DEBUG API_BASE =", API_BASE)
+ADMIN_USER = "admin"
+ADMIN_PASS = "admin123"
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "logged_in" not in session:
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+# rute autentikasi
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        
+        if username == ADMIN_USER and password == ADMIN_PASS:
+            session["logged_in"] = True
+            return redirect(url_for("index"))
+        else:
+            error = "username atau password salah!"
+            
+    return render_template("login.html", error=error)
+
+@app.route("/logout")
+def logout():
+    session.pop("logged_in", None)
+    return redirect(url_for("login"))
+
+
+# rute halaman dashboard
 @app.route("/")
+@login_required
 def index():
     try:
-        response = requests.get(f"{API_URL}/laporan")
+        response = requests.get(f"{API_URL}/laporan", timeout=5)
         laporan = [item for item in response.json() if item.get("eskalasi_posko") == True] if response.status_code == 200 else []
     except requests.exceptions.RequestException:
         laporan = []
@@ -39,9 +76,10 @@ def index():
     )
 
 @app.route("/daftar-laporan")
+@login_required
 def daftar_laporan():
     try:
-        response = requests.get(f"{API_URL}/laporan")
+        response = requests.get(f"{API_URL}/laporan", timeout=5)
         if response.status_code == 200:
             laporan = [item for item in response.json() if item.get("eskalasi_posko") == True]
         else:
@@ -62,10 +100,15 @@ def daftar_laporan():
     )
 
 @app.route("/laporan/<int:laporan_id>")
+@login_required
 def detail(laporan_id):
-    response = requests.get(
-        f"{API_URL}/laporan/{laporan_id}"
-    )
+    try:
+        response = requests.get(
+            f"{API_URL}/laporan/{laporan_id}",
+            timeout=5
+        )
+    except requests.exceptions.RequestException:
+        abort(404)
 
     if response.status_code != 200:
         abort(404)
@@ -87,35 +130,46 @@ def detail(laporan_id):
     )
 
 @app.post("/update-status/<int:laporan_id>")
+@login_required
 def update_status_laporan(laporan_id):
     status = request.form["status"]
 
-    requests.put(
-        f"{API_URL}/laporan/{laporan_id}/status",
-        json={
-            "status": status
-        }
-    )
+    try:
+        requests.put(
+            f"{API_URL}/laporan/{laporan_id}/status",
+            json={
+                "status": status
+            },
+            timeout=5
+        )
+    except requests.exceptions.RequestException:
+        pass
 
     return redirect(
         request.referrer or url_for('index')
     )
 
 @app.post("/update-kategori/<int:laporan_id>")
+@login_required
 def update_kategori_laporan(laporan_id):
     kategori = request.form["kategori"]
 
-    requests.put(
-        f"{API_URL}/laporan/{laporan_id}/kategori",
-        json={"kategori": kategori}
-    )
+    try:
+        requests.put(
+            f"{API_URL}/laporan/{laporan_id}/kategori",
+            json={"kategori": kategori},
+            timeout=5
+        )
+    except requests.exceptions.RequestException:
+        pass
 
     return redirect(request.referrer or url_for('daftar_laporan'))
 
 @app.route("/analysis")
+@login_required
 def analysis():
     try:
-        response = requests.get(f"{API_URL}/laporan")
+        response = requests.get(f"{API_URL}/laporan", timeout=5)
         if response.status_code == 200:
             laporan = [item for item in response.json() if item.get("eskalasi_posko") == True]
         else:

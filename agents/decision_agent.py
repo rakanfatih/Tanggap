@@ -1,10 +1,12 @@
 from pydantic import BaseModel, Field
 
+
 class DecisionOutput(BaseModel):
     action: str = Field(description="escalate, respond, atau reject")
     eskalasi_posko: bool = Field(description="true jika laporan diteruskan ke dashboard BPBD")
     kategori_laporan: str = Field(description="insiden terverifikasi, perlu tinjauan, atau bukan laporan")
     reason: str = Field(description="alasan keputusan")
+
 
 def make_decision(
     intent: str,

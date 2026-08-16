@@ -44,7 +44,7 @@ def simpan_laporan(db: Session, data: dict):
     )
     db.add(decision)
 
-    #simpan data executor
+    # simpan data executor
     executor = Executor(
         laporan_id=laporan.id,
         final_response=data["final_response"]
@@ -65,6 +65,7 @@ def simpan_laporan(db: Session, data: dict):
 
     return laporan
 
+
 def get_chat_history(db: Session, session_id: str, limit: int = 5):
     histori = (
         db.query(Laporan)
@@ -84,24 +85,22 @@ def get_chat_history(db: Session, session_id: str, limit: int = 5):
         
     return chat_history
 
-def get_all_laporan(
-    db: Session
-):
+
+def get_all_laporan(db: Session):
     return (
         db.query(Laporan)
         .order_by(Laporan.waktu.desc())
         .all()
     )
 
-def get_laporan_by_id(
-    db: Session,
-    laporan_id: int
-):
+
+def get_laporan_by_id(db: Session, laporan_id: int):
     return (
         db.query(Laporan)
         .filter(Laporan.id == laporan_id)
         .first()
     )
+
 
 def update_status(db: Session, laporan_id: int, status: str):
     laporan = get_laporan_by_id(db, laporan_id)
@@ -115,6 +114,7 @@ def update_status(db: Session, laporan_id: int, status: str):
     db.refresh(laporan)
 
     return laporan
+
 
 def update_kategori_laporan(db: Session, laporan_id: int, kategori: str):
     laporan = get_laporan_by_id(db, laporan_id)

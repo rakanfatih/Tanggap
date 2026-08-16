@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 
+
 class VisionOutput(BaseModel):
     flood_detected: bool
     confidence: float

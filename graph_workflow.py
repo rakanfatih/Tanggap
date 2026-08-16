@@ -1,11 +1,13 @@
 from typing import TypedDict, Optional
 from langgraph.graph import StateGraph, END
+
 from agents.router_agent import route_message
 from agents.validator_agent import validasi_laporan
 from agents.retriever_agent import retrieve_sop_info
 from agents.decision_agent import make_decision
 from agents.executor_agent import execute_response
 from agents.vision_agent import analyze_image
+
 
 # graph State
 class GraphState(TypedDict):
@@ -58,6 +60,7 @@ class GraphState(TypedDict):
     # executor
     final_response: Optional[str]
 
+
 # nodes
 def node_router(state: GraphState):
     hasil = route_message(
@@ -71,6 +74,7 @@ def node_router(state: GraphState):
         "confidence": hasil.confidence,
         "router_reason": hasil.alasan
     }
+
 
 def node_validator(state: GraphState):
     hasil = validasi_laporan(
@@ -88,6 +92,7 @@ def node_validator(state: GraphState):
         "curah_hujan_mm": hasil["curah_hujan_mm"],
         "poin_cuaca": hasil["poin_cuaca"]
     }
+
 
 def node_vision(state: GraphState):
     image_path = state.get("image_path")
@@ -111,6 +116,7 @@ def node_vision(state: GraphState):
         "vision_image_path": hasil.vision_image_path
     }
 
+
 def node_retriever(state: GraphState):
     hasil = retrieve_sop_info(query=state["user_message"])
 
@@ -118,6 +124,7 @@ def node_retriever(state: GraphState):
         "context": hasil["context"],
         "total_references": hasil["total_references"]
     }
+
 
 def node_decision(state: GraphState):
     object_count = state.get("object_count", 0)
@@ -146,6 +153,7 @@ def node_decision(state: GraphState):
         "decision_reason": reason_final
     }
 
+
 def node_executor(state: GraphState):
     hasil = execute_response(
         user_message=state["user_message"],
@@ -161,17 +169,19 @@ def node_executor(state: GraphState):
         "final_response": hasil.final_response
     }
 
+
 # edge routing and workflow compilation
 def router_condition(state: GraphState):
     intent = state["intent"]
     if intent == "lapor_darurat":
-        return ["validator", "vision"]
+        return "validator"
     elif intent == "tanya_info":
         return "retriever"
     else:
         return "decision"
 
-# build graph  
+
+# build graph
 workflow = StateGraph(GraphState)
 
 workflow.add_node("router", node_router)
@@ -186,10 +196,10 @@ workflow.set_entry_point("router")
 workflow.add_conditional_edges(
     "router",
     router_condition,
-    ["validator", "vision", "retriever", "decision"]
+    ["validator", "retriever", "decision"]
 )
 
-workflow.add_edge("validator", "decision")
+workflow.add_edge("validator", "vision")
 workflow.add_edge("vision", "decision")
 workflow.add_edge("retriever", "decision")
 workflow.add_edge("decision", "executor")

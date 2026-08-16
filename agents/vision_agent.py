@@ -17,6 +17,7 @@ from vision.image_validator import validate_image
 
 load_dotenv()
 
+
 # helper functions
 def encode_image(image_path: str, max_size: int = 800):
     img = cv2.imread(image_path)
@@ -33,6 +34,7 @@ def encode_image(image_path: str, max_size: int = 800):
     _, buffer = cv2.imencode('.jpg', img, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
 
     return base64.b64encode(buffer).decode('utf-8')
+
 
 def _extract_text_content(content) -> str:
     if content is None:
@@ -57,11 +59,13 @@ def _extract_text_content(content) -> str:
 
     return str(content).strip()
 
+
 def _strip_think_tags(text: str) -> str:
     cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
     if "<think>" in cleaned and "</think>" not in cleaned:
         cleaned = cleaned.split("<think>")[0]
     return cleaned.strip()
+
 
 def _extract_balanced_json(text: str) -> str | None:
     start = text.find("{")
@@ -95,13 +99,14 @@ def _extract_balanced_json(text: str) -> str | None:
 
     return None  
 
+
 def _clean_json_text(json_str: str) -> str:
     json_str = re.sub(r",\s*([}\]])", r"\1", json_str)
     return json_str
 
+
 # agent function
 def analyze_image(image_path: str) -> VisionOutput:
-
     try:
         validate_image(image_path)
     except Exception as e:
@@ -225,7 +230,7 @@ def analyze_image(image_path: str) -> VisionOutput:
                 raise
 
         if response is not None and (not hasattr(response, "content") or not response.content):
-            raise ValueError("API mengembalikan respons kosong (None atau empty content).")
+            raise ValueError("api mengembalikan respons kosong (none atau empty content).")
 
         if response is not None:
             raw_text = _extract_text_content(response.content)
@@ -246,7 +251,7 @@ def analyze_image(image_path: str) -> VisionOutput:
             if isinstance(data_dict.get("possible_fake"), str):
                 data_dict["possible_fake"] = data_dict["possible_fake"].lower() == "true"
         else:
-            print("model tidak mengeluarkan JSON murni. melakukan ekstraksi fallback...")
+            print("model tidak mengeluarkan json murni. melakukan ekstraksi fallback...")
 
             is_flood = "flooded" in raw_text.lower() or "banjir" in raw_text.lower() or "water" in raw_text.lower()
             data_dict = {
@@ -261,13 +266,13 @@ def analyze_image(image_path: str) -> VisionOutput:
                 "object_count": 5 if is_flood else 0,
                 "image_quality": "Baik",
                 "possible_fake": False,
-                "reason": "Diekstrak otomatis dari analisis visual karena format JSON dari AI terpotong batasan token."
+                "reason": "Diekstrak otomatis dari analisis visual karena format json dari ai terpotong batasan token."
             }
 
         hasil = VisionOutput(**data_dict)
 
     except json.JSONDecodeError as e:
-        print(f"[VISION ERROR] JSON tidak valid: {e}")
+        print(f"[vision error] json tidak valid: {e}")
         hasil = VisionOutput(
             flood_detected=False,
             confidence=0.0,
@@ -279,10 +284,10 @@ def analyze_image(image_path: str) -> VisionOutput:
             object_count=0,
             image_quality="Buruk",
             possible_fake=True,
-            reason=f"JSON dari API tidak valid: {str(e)}"
+            reason=f"json dari api tidak valid: {str(e)}"
         )
     except Exception as e:
-        print(f"gagal memproses/parsing JSON dari API: {e}")
+        print(f"gagal memproses/parsing json dari api: {e}")
         hasil = VisionOutput(
             flood_detected=False,
             confidence=0.0,
@@ -294,7 +299,7 @@ def analyze_image(image_path: str) -> VisionOutput:
             object_count=0,
             image_quality="Buruk",
             possible_fake=True,
-            reason=f"gagal memproses/parsing JSON dari API: {str(e)}"
+            reason=f"gagal memproses/parsing json dari api: {str(e)}"
         )
 
     hasil.vision_image_path = None

@@ -3,18 +3,16 @@ langchain
 langgraph
 langchain-groq
 langchain-community
+groq
 
-# vectordb & embedding lokal
-chromadb
-sentence-transformers
-pypdf
-tiktoken
-huggingface_hub
-
-# backend & API
+# backend, api & keamanan
 fastapi
 uvicorn
+slowapi
 requests
+
+# dashboard (frontend lokal)
+flask
 
 # env management
 python-dotenv
@@ -22,11 +20,15 @@ python-dotenv
 # database
 sqlalchemy
 
-# vision Agent
-ultralytics
+# vectordb & embedding lokal (rag)
+chromadb
+langchain-chroma
+langchain-huggingface
+sentence-transformers
+pypdf
+tiktoken
+huggingface_hub
+
+# vision processing 
 opencv-python
-transformers
-torch
-torchvision
-pillow
 numpy

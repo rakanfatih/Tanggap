@@ -13,10 +13,10 @@
 <body>
 
 <div class="app-wrapper">
-    <!-- Overlay Transparan -->
+    <!-- overlay transparan -->
     <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-    <!-- SIDEBAR -->
+    <!-- sidebar -->
     <aside class="sidebar">
         <div class="sidebar-logo">
             <i class="fa-solid fa-shield-halved fa-3x mb-2"></i>
@@ -25,14 +25,17 @@
         <ul class="nav-menu">
             <li><a href="/" class="active"><i class="fa-solid fa-house"></i> Dashboard</a></li>
             <li><a href="/daftar-laporan"><i class="fa-solid fa-file-lines"></i> Laporan</a></li>
-            <li><a href="/analysis"><i class="fa-solid fa-chart-pie"></i> Analysis</a>
+            <li><a href="/analysis"><i class="fa-solid fa-chart-pie"></i> Analysis</a></li>
+            <li class="mt-4 border-top pt-3 border-secondary">
+                <a href="/logout" class="text-danger fw-bold"><i class="fa-solid fa-power-off"></i> Keluar</a>
+            </li>
         </ul>
     </aside>
 
-    <!-- MAIN CONTENT -->
+    <!-- main content -->
     <main class="main-content">
         
-        <!-- HEADER BARU -->
+        <!-- header baru -->
         <header class="top-header">
             <div class="d-flex align-items-center gap-3">
                 <div class="header-toggle" onclick="toggleSidebar()" title="Buka Menu">
@@ -46,7 +49,7 @@
             </div>
         </header>
 
-        <!-- STATS CARDS -->
+        <!-- stats cards -->
         <div class="stats-container">
             <div class="stat-card card-purple">
                 <i class="fa-solid fa-layer-group position-absolute top-0 start-0 m-4 fs-3 opacity-25"></i>
@@ -70,7 +73,7 @@
             </div>
         </div>
 
-        <!-- MAP & RECENT REPORTS -->
+        <!-- map & recent reports -->
         <div class="dashboard-grid">
             <div class="map-container shadow-sm border-0">
                 <div id="map"></div>
@@ -104,7 +107,7 @@
     </main>
 </div>
 
-<!-- TOAST NOTIFICATION -->
+<!-- toast notification -->
 <div class="toast-container position-fixed bottom-0 end-0 p-4">
     <div id="laporanToast" class="toast align-items-center text-bg-dark border-0 shadow-lg rounded-4" role="alert" data-bs-delay="3000">
         <div class="d-flex">
@@ -117,7 +120,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-<!-- REAL-TIME POLLING -->
+<!-- real-time polling -->
 <script>
 let lastId = {{ laporan[0]["id"] if laporan else 0 }};
 
@@ -149,7 +152,7 @@ async function cekLaporanBaru() {
             toast.show();
         }
     } catch (error) { 
-        console.log("Tidak dapat menghubungi API.", error); 
+        console.log("tidak dapat menghubungi api.", error); 
     }
 }
 
@@ -159,7 +162,7 @@ setInterval(cekLaporanBaru, 5000);
 <script> const API_BASE_URL = "{{ api_base }}";</script>
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
 
-<!-- FUNGSI PANNING MAP & TOGGLE SIDEBAR -->
+<!-- fungsi panning map & toggle sidebar -->
 <script>
     function focusMap(lat, lng, id) {
         if (lat && lng) {

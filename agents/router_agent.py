@@ -5,6 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 load_dotenv()
 
+
 # output schema
 class RouterOutput(BaseModel):
     intent: str = Field(description="hanya boleh berisi: lapor_darurat, tanya_info, atau lainnya")
@@ -12,12 +13,12 @@ class RouterOutput(BaseModel):
     confidence: float = Field(description="nilai keyakinan 0 sampai 1")
     alasan: str = Field(description="alasan klasifikasi")
 
+
 # agent function
 def route_message(user_message: str, chat_history: str = "") -> RouterOutput:
-    
     # inisialisasi model
     llm = ChatGroq(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         temperature=0
     )
     

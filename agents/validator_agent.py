@@ -7,6 +7,7 @@ HEADERS = {
     "User-Agent": "Tanggap-BPBD/1.0 (rakanfatih01@gmail.com)"
 }
 
+
 # helper functions
 def cek_cuaca_aktual(lat: float, lon: float):
     url = (
@@ -34,18 +35,19 @@ def cek_cuaca_aktual(lat: float, lon: float):
         total_curah_hujan = sum([x for x in curah_hujan_list if x is not None])
 
         return {
-            "weather": "Data Diterima",
+            "weather": "data diterima",
             "temperature": suhu,
             "curah_hujan_mm": total_curah_hujan
         }
 
     except Exception as e:
-        print(f"gagal mengambil data cuaca Open-Meteo: {e}")
+        print(f"gagal mengambil data cuaca open-meteo: {e}")
         return {
-            "weather": "Tidak diketahui",
+            "weather": "tidak diketahui",
             "temperature": None,
             "curah_hujan_mm": 0.0
         }
+
 
 def cek_lokasi_aktual(lat: float, lon: float):
     url = (
@@ -66,8 +68,9 @@ def cek_lokasi_aktual(lat: float, lon: float):
         return {"address": alamat, "gps_valid": True}
 
     except Exception as e:
-        print(f"gagal mengambil data lokasi Nominatim: {e}")
+        print(f"gagal mengambil data lokasi nominatim: {e}")
         return {"address": "lokasi tidak diketahui", "gps_valid": False}
+
 
 def koordinat_valid(lat, lon):
     if lat is None or lon is None: 
@@ -80,6 +83,7 @@ def koordinat_valid(lat, lon):
         return False
 
     return True
+
 
 def klasifikasi_hujan_bmkg(curah_hujan_mm: float):
     if curah_hujan_mm < 0.5:
@@ -95,6 +99,7 @@ def klasifikasi_hujan_bmkg(curah_hujan_mm: float):
     else:
         return "Hujan Ekstrem", 50
 
+
 def hitung_validation_score(gps_valid: bool, address: str, skor_hujan: int):
     score = 0
 
@@ -107,6 +112,7 @@ def hitung_validation_score(gps_valid: bool, address: str, skor_hujan: int):
     score += skor_hujan
 
     return min(score, 100)
+
 
 # agent function
 def validasi_laporan(user_message: str, lat: float, lon: float):

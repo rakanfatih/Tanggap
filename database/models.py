@@ -6,6 +6,8 @@ from database.database import Base
 
 def get_waktu_wib():
     return datetime.utcnow() + timedelta(hours=7)
+
+
 # laporan
 class Laporan(Base):
     __tablename__ = "laporan"
@@ -28,6 +30,7 @@ class Laporan(Base):
     vision = relationship("Vision", back_populates="laporan", uselist=False, cascade="all, delete-orphan")
     executor = relationship("Executor", back_populates="laporan", uselist=False, cascade="all, delete-orphan")
 
+
 # router
 class Router(Base):
     __tablename__ = "router"
@@ -40,6 +43,7 @@ class Router(Base):
 
     laporan = relationship("Laporan", back_populates="router")
 
+
 # validator
 class Validator(Base):
     __tablename__ = "validator"
@@ -49,6 +53,7 @@ class Validator(Base):
     validation_score = Column(Integer)
 
     laporan = relationship("Laporan", back_populates="validator")
+
 
 # decision
 class Decision(Base):
@@ -62,6 +67,7 @@ class Decision(Base):
 
     laporan = relationship("Laporan", back_populates="decision")
 
+
 # vision
 class Vision(Base):
     __tablename__ = "vision"
@@ -74,8 +80,11 @@ class Vision(Base):
 
     laporan = relationship("Laporan", back_populates="vision")
 
+
+# executor
 class Executor(Base):
     __tablename__ = "executor"
+    
     id = Column(Integer, primary_key=True, index=True)
     laporan_id = Column(Integer, ForeignKey("laporan.id", ondelete="CASCADE"))
     final_response = Column(String)

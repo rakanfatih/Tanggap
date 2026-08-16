@@ -6,7 +6,7 @@ import time
 import json
 from dotenv import load_dotenv
 from typing import Optional
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -29,10 +29,10 @@ from database.crud import (
 
 load_dotenv(override=True)
 
-# batasi IP address
+# batasi ip address
 limiter = Limiter(key_func=get_remote_address)
 
-# FastAPI  
+# fastapi  
 app = FastAPI(
     title="Tanggap Multi-Agent API",
     description="Backend API Sistem Koordinasi Bencana Banjir berbasis Multi-Agent",
@@ -52,11 +52,7 @@ DASHBOARD_URL = os.getenv("DASHBOARD_URL", "http://127.0.0.1:5000")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        DASHBOARD_URL,
-        "http://localhost:5000",
-        "http://127.0.0.1:8000",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -117,10 +113,11 @@ class EdukasiItem(BaseModel):
     file_url: str
 
 
-# API endpoints
+# api endpoints
 @app.post("/api/lapor", response_model=LaporanResponse)
 @limiter.limit("5/minute")
 async def proses_laporan(
+    request: Request,
     payload: LaporanRequest,
     db: Session = Depends(get_db)
 ):
@@ -351,7 +348,7 @@ async def upload_image(image: UploadFile = File(...)):
         "path": filepath
     }
 
-SERVER_URL = os.getenv("SERVER_URL", "http://192.168.1.10:8000")
+SERVER_URL = os.getenv("SERVER_URL", "http://127.0.0.1:8000")
 DATA_EDUKASI = []
 
 try:

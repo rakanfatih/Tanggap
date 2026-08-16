@@ -60,7 +60,9 @@ def create_vector_db():
 
     # embedding and saving to vector database
     print("membuat embedding dan menyimpan ke vectorDB (Chroma)...")
-    embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-m3")
+    embeddings = HuggingFaceEmbeddings(
+        model_name="BAAI/bge-m3"
+    )
     
     Chroma.from_documents(
         documents=chunks,

@@ -6,9 +6,11 @@ from langchain_core.prompts import ChatPromptTemplate
 
 load_dotenv()
 
+
 # output schema
 class ExecutorOutput(BaseModel):
     final_response: str = Field(description="Pesan akhir yang dikirim kepada warga.")
+
 
 # agent function
 def execute_response(
@@ -21,9 +23,9 @@ def execute_response(
     chat_history: str = ""
 ) -> ExecutorOutput:
     
-    # Inisialisasi model
+    # inisialisasi model
     llm = ChatGroq(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         temperature=0.2
     )
     

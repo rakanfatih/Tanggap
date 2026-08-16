@@ -12,25 +12,28 @@
 <body>
 
 <div class="app-wrapper">
-    <!-- Overlay Transparan -->
+    <!-- overlay transparan -->
     <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-    <!-- SIDEBAR -->
+    <!-- sidebar -->
     <aside class="sidebar">
         <div class="sidebar-logo">
             <i class="fa-solid fa-shield-halved fa-3x mb-2"></i>
             <h3>tanggap</h3>
         </div>
         <ul class="nav-menu">
-            <li><a href="/"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+            <li><a href="/" class="active"><i class="fa-solid fa-house"></i> Dashboard</a></li>
             <li><a href="/daftar-laporan"><i class="fa-solid fa-file-lines"></i> Laporan</a></li>
-            <li><a href="/analysis" class="active"><i class="fa-solid fa-chart-pie"></i> Analysis</a></li>
+            <li><a href="/analysis"><i class="fa-solid fa-chart-pie"></i> Analysis</a></li>
+            <li class="mt-4 border-top pt-3 border-secondary">
+                <a href="/logout" class="text-danger fw-bold"><i class="fa-solid fa-power-off"></i> Keluar</a>
+            </li>
         </ul>
     </aside>
 
-    <!-- MAIN CONTENT -->
+    <!-- main content -->
     <main class="main-content">
-        <!-- HEADER BARU -->
+        <!-- header baru -->
         <header class="top-header">
             <div class="d-flex align-items-center gap-3">
                 <div class="header-toggle" onclick="toggleSidebar()" title="Buka Menu">
@@ -49,7 +52,7 @@
         </div>
 
         <div class="row g-4 mb-4">
-            <!-- Tren Waktu Laporan -->
+            <!-- tren waktu laporan -->
             <div class="col-lg-8">
                 <div class="card h-100">
                     <div class="card-header">
@@ -61,7 +64,7 @@
                 </div>
             </div>
             
-            <!-- Kategori Laporan -->
+            <!-- kategori laporan -->
             <div class="col-lg-4">
                 <div class="card h-100">
                     <div class="card-header">
@@ -75,7 +78,7 @@
         </div>
 
         <div class="row g-4">
-            <!-- Objek Terdeteksi -->
+            <!-- objek terdeteksi -->
             <div class="col-lg-6">
                 <div class="card h-100">
                     <div class="card-header">
@@ -87,7 +90,7 @@
                 </div>
             </div>
 
-            <!-- Tingkat Keparahan -->
+            <!-- tingkat keparahan -->
             <div class="col-lg-6">
                 <div class="card h-100">
                     <div class="card-header">
@@ -202,6 +205,7 @@
         options: { responsive: true, maintainAspectRatio: false }
     });
 
+    // fungsi toggle sidebar
     function toggleSidebar() {
         document.querySelector('.sidebar').classList.toggle('active');
         document.querySelector('.sidebar-overlay').classList.toggle('active');
